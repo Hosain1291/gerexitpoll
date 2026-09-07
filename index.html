@@ -6,7 +6,7 @@ html
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>독일 선거 방송 그래픽 시뮬레이터 (ARD / ZDF)</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- 고화질 스크린샷 라이브러리 -->
+  <!-- 고화질 스크린샷 캡처 라이브러리 -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -39,8 +39,8 @@ html
       transition: clip-path 0.75s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
-    /* 스튜디오 디스플레이 은은한 외곽 글로우 */
-    .screen-glow {
+    /* 스튜디오 디스플레이 은은한 외곽 그림자 */
+    .screen-shadow {
       box-shadow: 0 20px 50px -10px rgba(0, 0, 0, 0.8), 0 0 30px rgba(25, 118, 210, 0.25);
     }
 
@@ -72,7 +72,7 @@ html
       </h1>
     </div>
 
-    <!-- 제어 버튼군 -->
+    <!-- 제어 및 저장 버튼군 -->
     <div class="flex items-center gap-2 flex-wrap">
       <!-- 방송국 선택 -->
       <div class="bg-slate-800 p-1 rounded-lg border border-slate-700 flex text-xs font-bold">
@@ -94,8 +94,25 @@ html
         </button>
       </div>
 
+      <!-- JSON 저장 버튼 -->
+      <button onclick="exportToJson()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow transition active:scale-95" title="현재 설정을 JSON 파일로 다운로드">
+        <svg class="w-4 h-4 fill-none stroke-current" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/>
+        </svg>
+        <span>JSON 저장</span>
+      </button>
+
+      <!-- JSON 불러오기 버튼 (파일 인풋 연동) -->
+      <label class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 border border-slate-700 cursor-pointer shadow transition active:scale-95" title="저장했던 JSON 설정 파일 불러오기">
+        <svg class="w-4 h-4 fill-none stroke-current" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+        </svg>
+        <span>JSON 불러오기</span>
+        <input type="file" id="json-file-input" accept=".json" onchange="importFromJson(event)" class="hidden">
+      </label>
+
       <!-- 사진 저장 버튼 -->
-      <button onclick="captureScreen()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow transition active:scale-95">
+      <button onclick="captureScreen()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow transition active:scale-95" title="방송 스크린을 고화질 PNG로 저장">
         <svg class="w-4 h-4 fill-none stroke-current" stroke-width="2" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
         </svg>
@@ -103,7 +120,7 @@ html
       </button>
 
       <!-- 전체화면 토글 -->
-      <button onclick="toggleFullScreen()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1.5 rounded-lg border border-slate-700 text-xs font-semibold flex items-center gap-1">
+      <button onclick="toggleFullScreen()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1.5 rounded-lg border border-slate-700 text-xs font-semibold flex items-center gap-1" title="화면 꽉 차게 보기">
         <svg class="w-4 h-4 fill-none stroke-current" stroke-width="2" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-5h-4m4 0v4m0-4l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
         </svg>
@@ -111,142 +128,20 @@ html
     </div>
   </header>
 
-  <!-- 메인 레이아웃 (좌측: 설정 & 제어 / 우측: 실시간 방송 송출 화면) -->
-  <main class="flex-1 flex flex-col lg:flex-row p-3 md:p-5 gap-5 max-w-[1920px] w-full mx-auto min-h-0">
+  <!-- 메인 레이아웃 (스크린 최우선 상단 노출 + 하단 컨트롤 & 설정 패널) -->
+  <main class="flex-1 flex flex-col p-3 md:p-5 gap-4 max-w-[1240px] w-full mx-auto min-h-0">
     
-    <!-- 좌측: 컨트롤 패널 -->
-    <aside class="w-full lg:w-96 flex-shrink-0 flex flex-col gap-3 bg-slate-900/95 border border-slate-800 rounded-xl p-4 shadow-xl overflow-y-auto max-h-[88vh]">
-      
-      <!-- 발표 시작 & 초기화 버튼 -->
-      <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2.5">
-        <div class="flex items-center justify-between">
-          <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">송출 애니메이션 (닦아내기)</span>
-          <span id="anim-status-badge" class="text-[11px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 font-semibold">대기 중</span>
-        </div>
+    <!-- 1. 메인 방송 송출 화면 (네모난 직각 16:9 스크린) -->
+    <section class="w-full flex flex-col items-center">
+      <div id="broadcast-screen" class="relative w-full aspect-[16/9] rounded-none overflow-hidden screen-shadow border-2 border-slate-700 bg-zdf flex flex-col justify-between p-4 md:p-6 lg:p-7 select-none transition-all duration-300 shadow-2xl">
         
-        <div class="grid grid-cols-2 gap-2">
-          <button id="btn-play" onclick="startBroadcastAnimation()" class="bg-emerald-600 hover:bg-emerald-500 active:scale-95 transition text-white text-xs font-bold py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 shadow">
-            <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 20 20"><path d="M6.3 2.841A1.5 1.5 0 004 4.11v11.78a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z"/></svg>
-            발표 시작
-          </button>
-          <button onclick="resetAnimation()" class="bg-slate-800 hover:bg-slate-700 active:scale-95 transition text-slate-300 text-xs font-semibold py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 border border-slate-700">
-            <svg class="w-3.5 h-3.5 fill-none stroke-current" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-            초기화
-          </button>
-        </div>
-
-        <div class="space-y-2 pt-1 border-t border-slate-800/80 text-xs">
-          <div class="flex items-center justify-between">
-            <label class="text-slate-400 font-medium">발표 순서</label>
-            <select id="order-mode" onchange="changeOrderMode()" class="bg-slate-900 border border-slate-700 text-slate-200 rounded px-2 py-1 text-xs focus:outline-none">
-              <option value="custom" selected>추가/등록 순서대로</option>
-              <option value="votes">득표율 높은 순</option>
-              <option value="all">동시 전체 발표</option>
-            </select>
-          </div>
-
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-1">
-              <label class="text-slate-400 font-medium">정당 간 대기 시간</label>
-              <span id="delay-label" class="font-bold text-amber-400">1.0초</span>
-            </div>
-            <input type="range" id="delay-slider" min="0.3" max="3.0" step="0.1" value="1.0" oninput="updateDelay(this.value)" class="w-28 accent-amber-500 cursor-pointer">
-          </div>
-        </div>
-      </div>
-
-      <!-- 텍스트 설정 (방송국별 전용 텍스트 완벽 분리) -->
-      <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2 text-xs">
-        <div class="font-bold text-slate-300 flex items-center justify-between">
-          <span>방송 텍스트 설정</span>
-          <button onclick="resetDefaults()" class="text-[11px] text-blue-400 hover:underline">기본값 복원</button>
-        </div>
-
-        <!-- 공통 설정 -->
-        <div class="grid grid-cols-2 gap-2">
-          <div>
-            <label class="block text-slate-400 text-[11px] mb-0.5">지역 / 주 (Land)</label>
-            <input type="text" id="meta-region" value="Sachsen-Anhalt" oninput="renderScreen()" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200">
-          </div>
-          <div>
-            <label class="block text-slate-400 text-[11px] mb-0.5">총 의석수 (Sitze)</label>
-            <input type="number" id="meta-total-seats" value="83" oninput="renderScreen()" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200">
-          </div>
-        </div>
-
-        <!-- ZDF 전용 텍스트 필드 -->
-        <div id="cfg-zdf-box" class="space-y-1.5 pt-1 border-t border-slate-800">
-          <div class="text-[11px] font-bold text-amber-400">ZDF 전용 표기</div>
-          <div>
-            <label class="block text-slate-400 text-[10px] mb-0.5">헤드라인 (시간/유형)</label>
-            <input type="text" id="meta-zdf-headline" value="Hochrechnung 23:22 Uhr" oninput="renderScreen()" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200">
-          </div>
-          <div class="grid grid-cols-2 gap-2">
-            <div>
-              <label class="block text-slate-400 text-[10px] mb-0.5">타이틀</label>
-              <input type="text" id="meta-zdf-title" value="Wahl2026" oninput="renderScreen()" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200">
-            </div>
-            <div>
-              <label class="block text-slate-400 text-[10px] mb-0.5">세부 일시</label>
-              <input type="text" id="meta-zdf-subdate" value="06.09.2026, 23:24 Uhr" oninput="renderScreen()" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200">
-            </div>
-          </div>
-        </div>
-
-        <!-- ARD 전용 텍스트 필드 -->
-        <div id="cfg-ard-box" class="hidden space-y-1.5 pt-1 border-t border-slate-800">
-          <div class="text-[11px] font-bold text-sky-400">ARD 전용 표기</div>
-          <div class="grid grid-cols-2 gap-2">
-            <div>
-              <label class="block text-slate-400 text-[10px] mb-0.5">메인 타이틀</label>
-              <input type="text" id="meta-ard-main" value="WAHL 2026" oninput="renderScreen()" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200">
-            </div>
-            <div>
-              <label class="block text-slate-400 text-[10px] mb-0.5">서브 유형</label>
-              <input type="text" id="meta-ard-sub" value="Prognose" oninput="renderScreen()" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200">
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <label class="block text-slate-400 text-[10px] mb-0.5">조사기관 / 출처 (Quelle)</label>
-          <input type="text" id="meta-source" value="Quelle: Forschungsgruppe Wahlen" oninput="renderScreen()" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200">
-        </div>
-      </div>
-
-      <!-- 정당 목록 & 커스텀 추가/수정 -->
-      <div class="flex-1 flex flex-col min-h-0 bg-slate-950 p-3 rounded-xl border border-slate-800">
-        <div class="flex items-center justify-between mb-2">
-          <span class="font-bold text-xs text-slate-300">정당 데이터 (<span id="party-count">8</span>)</span>
-          <button onclick="addNewPartyModal()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs px-2.5 py-1 rounded transition">
-            + 정당 추가
-          </button>
-        </div>
-
-        <!-- 정당 목록 -->
-        <div id="party-list-container" class="flex-1 overflow-y-auto space-y-1.5 pr-1 max-h-[280px]"></div>
-
-        <div class="mt-2 pt-2 border-t border-slate-800 text-[11px] text-slate-400 flex justify-between">
-          <span>득표율 합계: <b id="sum-votes" class="text-slate-200">100.0%</b></span>
-          <span>의석 합계: <b id="sum-seats" class="text-slate-200">83석</b></span>
-        </div>
-      </div>
-    </aside>
-
-    <!-- 우측: 메인 방송 송출 화면 (16:9 비율 유지 스크린) -->
-    <section class="flex-1 flex flex-col items-center justify-center min-h-0">
-      
-      <!-- 16:9 프레임 (절대 비율 캔버스) -->
-      <div id="broadcast-screen" class="relative w-full max-w-[1140px] aspect-[16/9] rounded-xl overflow-hidden screen-glow border-2 border-slate-700 bg-zdf flex flex-col justify-between p-4 md:p-6 lg:p-7 select-none transition-all duration-300 shadow-2xl">
-        
-        <!-- ======================= 1. 상단 헤더 영역 ======================= -->
+        <!-- [상단 헤더 영역] -->
         <div id="screen-header" class="relative z-10 w-full shrink-0">
           
           <!-- ZDF 헤더 (2번 사진 완벽 일치) -->
           <div id="header-zdf" class="flex items-start justify-between w-full">
-            <!-- 좌측: 로고 + 시간 헤드라인 + 오렌지 바 -->
             <div class="flex items-start gap-3">
-              <!-- 흰색 달걀형 2DF 로고 -->
+              <!-- 타원형 2DF 로고 -->
               <div class="w-12 h-7 md:w-16 md:h-9 bg-white rounded-full flex items-center justify-center font-black text-slate-900 text-sm md:text-lg tracking-tighter shadow-md shrink-0 mt-0.5">
                 2DF
               </div>
@@ -261,7 +156,7 @@ html
               </div>
             </div>
 
-            <!-- 우측: Wahl2026 | Sachsen-Anhalt -->
+            <!-- 우측 타이틀 / 주 이름 / 일시 -->
             <div class="text-right border-l-2 border-white/20 pl-3 md:pl-5">
               <div id="disp-zdf-title" class="text-xl md:text-3xl lg:text-4xl font-black text-white tracking-tight leading-none">
                 Wahl2026
@@ -277,7 +172,6 @@ html
 
           <!-- ARD 헤더 (1번 사진 완벽 일치) -->
           <div id="header-ard" class="hidden flex-col w-full">
-            <!-- 상단 네이비 바 -->
             <div class="bg-[#123966]/90 text-white px-3 py-1.5 flex items-center justify-between border-b border-white/30">
               <div class="flex items-center gap-3">
                 <span id="disp-ard-main" class="font-black text-lg md:text-2xl lg:text-3xl tracking-tight uppercase">
@@ -288,12 +182,10 @@ html
                   Sachsen-Anhalt
                 </span>
               </div>
-              <!-- ARD 1 원형 로고 -->
               <div class="w-7 h-7 md:w-8 md:h-8 rounded-full border-2 border-white flex items-center justify-center font-black text-sm md:text-base">
                 1
               </div>
             </div>
-            <!-- 하단 반투명 연하늘색 서브 바 -->
             <div class="bg-white/20 px-3 py-1 flex items-center justify-between text-xs md:text-sm font-bold text-white border-b border-white/10">
               <span id="disp-ard-sub">Prognose</span>
               <span id="disp-ard-unit">in %</span>
@@ -302,24 +194,23 @@ html
 
         </div>
 
-        <!-- ======================= 2. 중앙 메인 그래픽 영역 ======================= -->
+        <!-- [중앙 메인 그래픽 영역] -->
         
         <!-- [A] 득표율 바 차트 모드 -->
         <div id="view-barchart" class="relative z-10 flex-1 flex flex-col justify-end w-full min-h-0 my-1">
-          <!-- 바 + 하단 테이블 전체 래퍼 -->
           <div class="w-full flex flex-col justify-end h-full">
             
-            <!-- 바들이 세워지는 상단 영역 -->
+            <!-- 바들이 솟아오르는 트랙 -->
             <div id="bars-track" class="w-full flex-1 flex items-end justify-center gap-1.5 md:gap-3 px-1 min-h-0">
-              <!-- JS 동적 생성 바 -->
+              <!-- JS 동적 바 -->
             </div>
 
-            <!-- 바닥 수평 분리선 (실제 방송 화면의 정교한 기준선) -->
-            <div id="bars-baseline" class="w-full h-1 bg-white/40 my-0.5"></div>
+            <!-- 바닥 수평 분리 기준선 -->
+            <div id="bars-baseline" class="w-full h-0.5 bg-white/20 my-0.5"></div>
 
-            <!-- 하단 정당 정보 패널/카드 (절대 안 잘리도록 높이 최적화) -->
+            <!-- 하단 정당 정보 패널/카드 (직각 사각형) -->
             <div id="bars-bottom-table" class="w-full flex items-stretch justify-center gap-1.5 md:gap-3 px-1 shrink-0">
-              <!-- JS 동적 생성 카드 -->
+              <!-- JS 동적 카드 -->
             </div>
 
           </div>
@@ -327,24 +218,22 @@ html
 
         <!-- [B] 의석수 반원 모드 (Sitzverteilung) -->
         <div id="view-seatschart" class="hidden relative z-10 flex-1 flex flex-col items-center justify-between w-full min-h-0 my-1">
-          <!-- 반원 아치 SVG -->
           <div class="relative w-full max-w-[560px] aspect-[2/1] flex items-end justify-center shrink-0">
             <svg id="parliament-svg" viewBox="0 0 400 205" class="w-full h-full filter drop-shadow-xl overflow-visible"></svg>
 
-            <!-- 중앙 도넛 홀 총 의석수 (ZDF 3번 사진 완벽 일치) -->
+            <!-- 중앙 도넛 홀 총 의석수 (3번 사진 완벽 일치) -->
             <div id="seats-center-badge" class="absolute bottom-0 flex flex-col items-center justify-center bg-[#13253a] border-2 border-slate-600 rounded-t-full w-24 h-12 md:w-32 md:h-16 px-2 shadow-inner">
               <span id="seats-center-total" class="font-num text-xl md:text-3xl font-black text-white leading-none">83</span>
               <span class="text-[9px] md:text-[10px] text-slate-300 uppercase tracking-wider font-bold">Sitze</span>
             </div>
           </div>
 
-          <!-- 하단 정당별 의석수 카드 -->
+          <!-- 하단 정당별 의석수 카드 (직각 사각형) -->
           <div id="seats-cards-container" class="w-full flex items-stretch justify-center gap-1.5 md:gap-3 px-1 shrink-0 mt-1"></div>
         </div>
 
-        <!-- ======================= 3. 하단 푸터 / 출처 (Quelle) ======================= -->
+        <!-- [하단 푸터 / 출처 (Quelle)] -->
         <div id="screen-footer" class="relative z-10 w-full shrink-0 flex items-center justify-between pt-1 border-t border-white/10 text-[10px] md:text-xs">
-          <!-- ARD 의석수 전용 대형 로고 (4번 사진) -->
           <div id="disp-ard-big-logo" class="hidden font-black text-lg md:text-2xl text-white/90 tracking-tighter uppercase">
             WAHL 2026
           </div>
@@ -356,20 +245,131 @@ html
           </div>
         </div>
 
-        <!-- 빔 프로젝터 반사 엠비언트 레이어 -->
+        <!-- 빔 프로젝터 엠비언트 레이어 -->
         <div class="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-white/5 z-0"></div>
       </div>
+    </section>
 
-      <!-- 안내 문구 -->
-      <p class="text-xs text-slate-400 mt-2.5 text-center">
-        <b>[사진 저장]</b>을 누르면 화면에 보이는 모든 수치와 하단 정당 정보가 잘림 없이 고화질 PNG로 즉시 다운로드됩니다.
-      </p>
+    <!-- 2. 빠른 송출 컨트롤 바 -->
+    <section class="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 shadow-md flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-2">
+        <button id="btn-play" onclick="startBroadcastAnimation()" class="bg-emerald-600 hover:bg-emerald-500 active:scale-95 transition text-white text-xs font-bold py-2 px-4 rounded-lg flex items-center gap-1.5 shadow">
+          <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 20 20"><path d="M6.3 2.841A1.5 1.5 0 004 4.11v11.78a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z"/></svg>
+          발표 시작
+        </button>
+        <button onclick="resetAnimation()" class="bg-slate-800 hover:bg-slate-700 active:scale-95 transition text-slate-300 text-xs font-semibold py-2 px-3.5 rounded-lg flex items-center gap-1.5 border border-slate-700">
+          <svg class="w-3.5 h-3.5 fill-none stroke-current" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+          초기화
+        </button>
+        <span id="anim-status-badge" class="text-[11px] px-2.5 py-1 rounded-md bg-slate-800 text-slate-400 font-semibold border border-slate-700/80">대기 중</span>
+      </div>
+
+      <div class="flex items-center gap-4 flex-wrap text-xs">
+        <div class="flex items-center gap-1.5">
+          <label class="text-slate-400 font-medium">발표 순서:</label>
+          <select id="order-mode" onchange="changeOrderMode()" class="bg-slate-950 border border-slate-700 text-slate-200 rounded px-2 py-1 text-xs focus:outline-none">
+            <option value="custom" selected>추가/등록 순서대로</option>
+            <option value="votes">득표율 높은 순</option>
+            <option value="all">동시 전체 발표</option>
+          </select>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <label class="text-slate-400 font-medium">정당 간 대기 시간:</label>
+          <span id="delay-label" class="font-bold text-amber-400 w-8">1.0초</span>
+          <input type="range" id="delay-slider" min="0.3" max="3.0" step="0.1" value="1.0" oninput="updateDelay(this.value)" class="w-24 accent-amber-500 cursor-pointer">
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. 상세 설정 패널 (텍스트 커스텀 & 정당 데이터 관리) -->
+    <section class="w-full grid grid-cols-1 lg:grid-cols-2 gap-4">
+      
+      <!-- 좌측: 방송 텍스트 세부 커스텀 -->
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-md space-y-3 text-xs">
+        <div class="font-bold text-slate-200 flex items-center justify-between border-b border-slate-800 pb-2">
+          <span class="text-sm">방송 텍스트 설정</span>
+          <button onclick="resetDefaults()" class="text-[11px] text-blue-400 hover:underline">기본값 복원</button>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2.5">
+          <div>
+            <label class="block text-slate-400 text-[11px] mb-1">지역 / 주 (Land)</label>
+            <input type="text" id="meta-region" value="Sachsen-Anhalt" oninput="renderScreen()" class="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-slate-100 font-medium">
+          </div>
+          <div>
+            <label class="block text-slate-400 text-[11px] mb-1">총 의석수 (Sitze)</label>
+            <input type="number" id="meta-total-seats" value="83" oninput="renderScreen()" class="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-slate-100 font-medium">
+          </div>
+        </div>
+
+        <!-- ZDF 전용 텍스트 필드 -->
+        <div id="cfg-zdf-box" class="space-y-2 pt-2 border-t border-slate-800/80">
+          <div class="text-[11px] font-bold text-amber-400">ZDF 전용 표기</div>
+          <div>
+            <label class="block text-slate-400 text-[10px] mb-0.5">헤드라인 (시간/유형)</label>
+            <input type="text" id="meta-zdf-headline" value="Hochrechnung 23:22 Uhr" oninput="renderScreen()" class="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1 text-slate-200">
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-slate-400 text-[10px] mb-0.5">타이틀</label>
+              <input type="text" id="meta-zdf-title" value="Wahl2026" oninput="renderScreen()" class="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1 text-slate-200">
+            </div>
+            <div>
+              <label class="block text-slate-400 text-[10px] mb-0.5">세부 일시</label>
+              <input type="text" id="meta-zdf-subdate" value="06.09.2026, 23:24 Uhr" oninput="renderScreen()" class="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1 text-slate-200">
+            </div>
+          </div>
+        </div>
+
+        <!-- ARD 전용 텍스트 필드 -->
+        <div id="cfg-ard-box" class="hidden space-y-2 pt-2 border-t border-slate-800/80">
+          <div class="text-[11px] font-bold text-sky-400">ARD 전용 표기</div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-slate-400 text-[10px] mb-0.5">메인 타이틀</label>
+              <input type="text" id="meta-ard-main" value="WAHL 2026" oninput="renderScreen()" class="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1 text-slate-200">
+            </div>
+            <div>
+              <label class="block text-slate-400 text-[10px] mb-0.5">서브 유형</label>
+              <input type="text" id="meta-ard-sub" value="Prognose" oninput="renderScreen()" class="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1 text-slate-200">
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-slate-400 text-[10px] mb-0.5">조사기관 / 출처 (Quelle)</label>
+          <input type="text" id="meta-source" value="Quelle: Forschungsgruppe Wahlen" oninput="renderScreen()" class="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1 text-slate-200">
+        </div>
+      </div>
+
+      <!-- 우측: 정당 데이터 관리 (추가, 수정, 삭제, 순서 이동) -->
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-md flex flex-col text-xs">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-2 mb-2.5">
+          <div class="flex items-center gap-1.5">
+            <span class="text-sm font-bold text-slate-200">정당 데이터 (<span id="party-count">8</span>)</span>
+            <span class="text-[10px] text-slate-500">순서 = 발표 순서</span>
+          </div>
+          <button onclick="addNewPartyModal()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs px-2.5 py-1 rounded transition flex items-center gap-1">
+            + 정당 추가
+          </button>
+        </div>
+
+        <!-- 정당 스크롤 목록 -->
+        <div id="party-list-container" class="flex-1 overflow-y-auto space-y-1.5 pr-1 max-h-[260px]"></div>
+
+        <div class="mt-3 pt-2 border-t border-slate-800 text-[11px] text-slate-400 flex justify-between">
+          <span>득표율 합계: <b id="sum-votes" class="text-slate-200">100.0%</b></span>
+          <span>의석 합계: <b id="sum-seats" class="text-slate-200">83석</b></span>
+        </div>
+      </div>
+
     </section>
   </main>
 
   <!-- 정당 추가/수정 모달 -->
   <div id="party-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md p-5 shadow-2xl space-y-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-md p-5 shadow-2xl space-y-4">
       <div class="flex items-center justify-between border-b border-slate-800 pb-3">
         <h3 id="modal-title" class="text-base font-bold text-white">정당 정보</h3>
         <button onclick="closeModal()" class="text-slate-400 hover:text-white text-lg font-bold">&times;</button>
@@ -411,13 +411,13 @@ html
           <label class="block text-slate-400 text-[11px] mb-1">독일 주요 정당 컬러 프리셋</label>
           <div class="flex items-center gap-2 flex-wrap">
             <button onclick="pickColor('#151518')" class="w-6 h-6 rounded-full bg-[#151518] border border-white/50" title="CDU"></button>
-            <button onclick="pickColor('#009ee0')" class="w-6 h-6 rounded-full bg-[#009ee0] border border-white/30" title="AfD"></button>
+            <button onclick="pickColor('#0066cc')" class="w-6 h-6 rounded-full bg-[#0066cc] border border-white/30" title="AfD"></button>
             <button onclick="pickColor('#bd3075')" class="w-6 h-6 rounded-full bg-[#bd3075] border border-white/30" title="Linke"></button>
-            <button onclick="pickColor('#e3000f')" class="w-6 h-6 rounded-full bg-[#e3000f] border border-white/30" title="SPD"></button>
-            <button onclick="pickColor('#ffed00')" class="w-6 h-6 rounded-full bg-[#ffed00] border border-white/30" title="FDP"></button>
-            <button onclick="pickColor('#46962b')" class="w-6 h-6 rounded-full bg-[#46962b] border border-white/30" title="Grüne"></button>
-            <button onclick="pickColor('#76204c')" class="w-6 h-6 rounded-full bg-[#76204c] border border-white/30" title="BSW"></button>
-            <button onclick="pickColor('#8b939c')" class="w-6 h-6 rounded-full bg-[#8b939c] border border-white/30" title="Andere"></button>
+            <button onclick="pickColor('#d91d1d')" class="w-6 h-6 rounded-full bg-[#d91d1d] border border-white/30" title="SPD"></button>
+            <button onclick="pickColor('#ffcc00')" class="w-6 h-6 rounded-full bg-[#ffcc00] border border-white/30" title="FDP"></button>
+            <button onclick="pickColor('#5ca628')" class="w-6 h-6 rounded-full bg-[#5ca628] border border-white/30" title="Grüne"></button>
+            <button onclick="pickColor('#661a40')" class="w-6 h-6 rounded-full bg-[#661a40] border border-white/30" title="BSW"></button>
+            <button onclick="pickColor('#7a8288')" class="w-6 h-6 rounded-full bg-[#7a8288] border border-white/30" title="Andere"></button>
           </div>
         </div>
       </div>
@@ -433,7 +433,7 @@ html
 
   <script>
     /* ====================================================================
-       기본 데이터 (제공해주신 실제 방송 사진 1 & 2의 수치 100% 반영)
+       기본 데이터 (제공해주신 실제 방송 사진 1 & 2 수치 100% 반영)
        ==================================================================== */
     const DEFAULT_PARTIES = [
       { id: '1', name: 'CDU', percent: 18.5, seats: 15, diff: -18.6, color: '#161616' },
@@ -456,6 +456,106 @@ html
 
     // 공개된 정당 ID 집합
     let revealedParties = new Set();
+
+    /* ====================================================================
+       JSON 저장(내보내기) 및 불러오기 기능
+       ==================================================================== */
+    function exportToJson() {
+      const configData = {
+        app: "German Election Graphics Simulator",
+        version: "1.0",
+        exportedAt: new Date().toISOString(),
+        settings: {
+          currentStation,
+          currentView,
+          orderMode,
+          stepDelay,
+          region: document.getElementById('meta-region').value,
+          totalSeats: parseInt(document.getElementById('meta-total-seats').value) || 83,
+          source: document.getElementById('meta-source').value,
+          zdfHeadline: document.getElementById('meta-zdf-headline').value,
+          zdfTitle: document.getElementById('meta-zdf-title').value,
+          zdfSubdate: document.getElementById('meta-zdf-subdate').value,
+          ardMain: document.getElementById('meta-ard-main').value,
+          ardSub: document.getElementById('meta-ard-sub').value
+        },
+        parties: parties
+      };
+
+      const jsonStr = JSON.stringify(configData, null, 2);
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      
+      const a = document.createElement('a');
+      const timeTag = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+      a.download = `German_Election_${currentStation}_${timeTag}.json`;
+      a.href = url;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function importFromJson(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const data = JSON.parse(e.target.result);
+          
+          if (!data.parties || !Array.isArray(data.parties)) {
+            alert("유효한 선거 설정 JSON 파일이 아닙니다.");
+            return;
+          }
+
+          // 1. 정당 데이터 복원
+          parties = data.parties;
+
+          // 2. 설정 항목 복원
+          if (data.settings) {
+            const s = data.settings;
+            if (s.region) document.getElementById('meta-region').value = s.region;
+            if (s.totalSeats) document.getElementById('meta-total-seats').value = s.totalSeats;
+            if (s.source) document.getElementById('meta-source').value = s.source;
+            if (s.zdfHeadline) document.getElementById('meta-zdf-headline').value = s.zdfHeadline;
+            if (s.zdfTitle) document.getElementById('meta-zdf-title').value = s.zdfTitle;
+            if (s.zdfSubdate) document.getElementById('meta-zdf-subdate').value = s.zdfSubdate;
+            if (s.ardMain) document.getElementById('meta-ard-main').value = s.ardMain;
+            if (s.ardSub) document.getElementById('meta-ard-sub').value = s.ardSub;
+
+            if (s.stepDelay) {
+              stepDelay = parseFloat(s.stepDelay);
+              document.getElementById('delay-slider').value = stepDelay;
+              document.getElementById('delay-label').innerText = stepDelay.toFixed(1) + '초';
+            }
+
+            if (s.orderMode) {
+              orderMode = s.orderMode;
+              document.getElementById('order-mode').value = s.orderMode;
+            }
+
+            if (s.currentStation) {
+              setStation(s.currentStation);
+            }
+            if (s.currentView) {
+              setViewMode(s.currentView);
+            }
+          }
+
+          // 초기화 및 전체 갱신
+          resetAnimation();
+          parties.forEach(p => revealedParties.add(p.id));
+          renderPartyList();
+          renderScreen();
+
+        } catch (err) {
+          alert("JSON 파일을 파싱하는 중 오류가 발생했습니다:\n" + err.message);
+        } finally {
+          event.target.value = ''; // 재선택 가능하도록 초기화
+        }
+      };
+      reader.readAsText(file);
+    }
 
     /* ====================================================================
        방송국 및 뷰 모드 전환
@@ -576,7 +676,7 @@ html
       }
     }
 
-    // [A] 바 차트 렌더링 (헤더와 하단 테이블이 절대 짤리지 않는 완벽한 2단 레이아웃)
+    // [A] 바 차트 렌더링 (모서리 직각 사각형 + 비율 유지)
     function renderBarGraphic() {
       const track = document.getElementById('bars-track');
       const bottomTable = document.getElementById('bars-bottom-table');
@@ -589,28 +689,25 @@ html
 
       parties.forEach(party => {
         const isRevealed = revealedParties.has(party.id);
-        // 바 높이 퍼센트 (최대 90% 높이)
         const barHeightPct = (party.percent / maxVal) * 90;
 
-        // 1. 바 컬럼
+        // 1. 바 컬럼 (네모난 직각 마감)
         const barCol = document.createElement('div');
         barCol.className = "flex-1 flex flex-col justify-end items-center h-full max-w-[140px]";
 
         if (currentStation === 'ZDF') {
-          // ZDF 스타일: 상단 흰색 캡 + 단색 바
           barCol.innerHTML = `
             <div class="w-full flex-1 flex flex-col justify-end items-center">
-              <div class="w-full wipe-transition ${isRevealed ? 'wipe-up-active' : 'wipe-up-hidden'} rounded-t-sm shadow-lg overflow-hidden flex flex-col justify-between"
+              <div class="w-full wipe-transition ${isRevealed ? 'wipe-up-active' : 'wipe-up-hidden'} rounded-none shadow-lg overflow-hidden flex flex-col justify-between"
                    style="height: ${barHeightPct}%; background-color: ${party.color};">
                 <div class="w-full h-1.5 bg-white shadow-sm shrink-0"></div>
               </div>
             </div>
           `;
         } else {
-          // ARD 스타일: 2px 선명한 화이트 외곽선 + 바
           barCol.innerHTML = `
             <div class="w-full flex-1 flex flex-col justify-end items-center">
-              <div class="w-full wipe-transition ${isRevealed ? 'wipe-up-active' : 'wipe-up-hidden'} border-2 border-white rounded-t-sm shadow-md"
+              <div class="w-full wipe-transition ${isRevealed ? 'wipe-up-active' : 'wipe-up-hidden'} border-2 border-white rounded-none shadow-md"
                    style="height: ${barHeightPct}%; background-color: ${party.color};">
               </div>
             </div>
@@ -618,19 +715,18 @@ html
         }
         track.appendChild(barCol);
 
-        // 2. 하단 정보 테이블/카드 (독일식 콤마 표기 및 줄 바꿈 없는 컴팩트 레이아웃)
+        // 2. 하단 정보 테이블 (네모난 직각 마감)
         const infoCol = document.createElement('div');
         infoCol.className = "flex-1 max-w-[140px] text-center shrink-0";
 
-        // 독일식 소수점 표기 (예: 18,5)
         const percentStr = party.percent.toFixed(1).replace('.', ',');
         const diffNum = party.diff;
         const diffStr = (diffNum >= 0 ? '+' : '') + diffNum.toFixed(1).replace('.', ',');
 
         if (currentStation === 'ZDF') {
-          // ZDF (2번 사진): 독립 화이트 카드 (상단 득표율 -> 중간 컬러 띠 -> 하단 정당명)
+          // ZDF: 화이트 카드 (상단 득표율 -> 중간 컬러 띠 -> 하단 정당명)
           infoCol.innerHTML = `
-            <div class="bg-white rounded-sm shadow-md pt-1 pb-1.5 px-0.5 border-t border-slate-200">
+            <div class="bg-white rounded-none shadow-md pt-1 pb-1.5 px-0.5 border-t border-slate-200">
               <div class="font-num font-black text-sm md:text-xl lg:text-2xl text-slate-950 leading-none py-0.5">
                 ${isRevealed ? percentStr : '—'}
               </div>
@@ -641,9 +737,9 @@ html
             </div>
           `;
         } else {
-          // ARD (1번 사진): 3단 패널 (상단 정당 컬러 띠+정당명 -> 중간 득표율 -> 하단 회색 증감률)
+          // ARD: 3단 패널 (정당 컬러 띠+정당명 -> 득표율 -> 회색 증감률)
           infoCol.innerHTML = `
-            <div class="bg-white rounded-sm shadow-md overflow-hidden border border-slate-200">
+            <div class="bg-white rounded-none shadow-md overflow-hidden border border-slate-200">
               <div class="h-1.5 w-full" style="background-color: ${party.color};"></div>
               <div class="py-0.5 px-0.5 font-bold text-[11px] md:text-sm text-slate-900 border-b border-slate-200 truncate">
                 ${party.name}
@@ -661,7 +757,7 @@ html
       });
     }
 
-    // [B] 의석수 렌더링 (반원 아치 다이어그램)
+    // [B] 의석수 렌더링 (반원 아치 다이어그램 + 네모 카드)
     function renderSeatsGraphic(totalSeats) {
       const svg = document.getElementById('parliament-svg');
       const cardsContainer = document.getElementById('seats-cards-container');
@@ -722,14 +818,13 @@ html
         currentAngle = nextAngle;
       });
 
-      // 하단 의석수 카드 (3번 & 4번 사진 스타일)
+      // 하단 의석수 카드
       parties.forEach(party => {
         const isRevealed = revealedParties.has(party.id);
         const card = document.createElement('div');
-        card.className = "flex-1 max-w-[130px] rounded-sm overflow-hidden text-center shadow-md shrink-0";
+        card.className = "flex-1 max-w-[130px] rounded-none overflow-hidden text-center shadow-md shrink-0";
 
         if (currentStation === 'ZDF') {
-          // ZDF: 상단 의석수 -> 컬러 띠 -> 정당명
           card.innerHTML = `
             <div class="bg-white py-1 md:py-1.5 px-0.5 text-slate-900 border-b-2" style="border-color: ${party.color};">
               <div class="font-num font-black text-sm md:text-xl text-slate-950 leading-none">
@@ -741,7 +836,6 @@ html
             </div>
           `;
         } else {
-          // ARD: 상단 컬러 띠 -> 정당명 -> 의석수
           card.innerHTML = `
             <div class="h-1.5 w-full" style="background-color: ${party.color};"></div>
             <div class="bg-white py-1 px-0.5 text-slate-900 border-b border-slate-200">
@@ -771,11 +865,11 @@ html
         totalSeats += Number(p.seats) || 0;
 
         const row = document.createElement('div');
-        row.className = "flex items-center justify-between p-2 rounded-lg bg-slate-900 border border-slate-800 hover:border-slate-700 text-xs";
+        row.className = "flex items-center justify-between p-2 rounded-lg bg-slate-950 border border-slate-800 hover:border-slate-700 text-xs";
         row.innerHTML = `
           <div class="flex items-center gap-2 min-w-0">
             <span class="text-[10px] font-mono text-slate-500 w-3">${idx + 1}</span>
-            <span class="w-3 h-5 rounded" style="background-color: ${p.color};"></span>
+            <span class="w-3 h-5 rounded-none" style="background-color: ${p.color};"></span>
             <div class="truncate">
               <span class="font-bold text-slate-200">${p.name}</span>
               <span class="text-[10px] text-slate-400 ml-1.5">${p.percent.toFixed(1)}% | ${p.seats}석</span>
@@ -823,7 +917,7 @@ html
       document.getElementById('modal-percent').value = "5.0";
       document.getElementById('modal-seats').value = "5";
       document.getElementById('modal-diff').value = "0.0";
-      pickColor('#009ee0');
+      pickColor('#0066cc');
       document.getElementById('party-modal').classList.remove('hidden');
     }
 
@@ -862,7 +956,7 @@ html
       const percent = parseFloat(document.getElementById('modal-percent').value) || 0;
       const seats = parseInt(document.getElementById('modal-seats').value) || 0;
       const diff = parseFloat(document.getElementById('modal-diff').value) || 0;
-      const color = document.getElementById('modal-color').value || '#009ee0';
+      const color = document.getElementById('modal-color').value || '#0066cc';
 
       if (!name) {
         alert("정당 이름을 입력해주세요.");
@@ -904,7 +998,7 @@ html
       animationTimers = [];
       isBroadcasting = false;
       document.getElementById('anim-status-badge').innerText = "대기 중";
-      document.getElementById('anim-status-badge').className = "text-[11px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 font-semibold";
+      document.getElementById('anim-status-badge').className = "text-[11px] px-2.5 py-1 rounded-md bg-slate-800 text-slate-400 font-semibold border border-slate-700/80";
       document.getElementById('btn-play').innerHTML = `
         <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 20 20"><path d="M6.3 2.841A1.5 1.5 0 004 4.11v11.78a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z"/></svg>
         발표 시작
@@ -929,7 +1023,7 @@ html
       isBroadcasting = true;
       const badge = document.getElementById('anim-status-badge');
       badge.innerText = "송출 중";
-      badge.className = "text-[11px] px-2 py-0.5 rounded-full bg-red-600 text-white font-bold animate-pulse";
+      badge.className = "text-[11px] px-2.5 py-1 rounded-md bg-red-600 text-white font-bold animate-pulse border border-red-500";
       document.getElementById('btn-play').innerHTML = `
         <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
         일시정지
@@ -944,7 +1038,7 @@ html
         setTimeout(() => {
           clearTimers();
           badge.innerText = "완료";
-          badge.className = "text-[11px] px-2 py-0.5 rounded-full bg-emerald-600 text-white font-bold";
+          badge.className = "text-[11px] px-2.5 py-1 rounded-md bg-emerald-600 text-white font-bold border border-emerald-500";
         }, 800);
         return;
       }
@@ -960,7 +1054,7 @@ html
             setTimeout(() => {
               isBroadcasting = false;
               badge.innerText = "완료";
-              badge.className = "text-[11px] px-2 py-0.5 rounded-full bg-emerald-600 text-white font-bold";
+              badge.className = "text-[11px] px-2.5 py-1 rounded-md bg-emerald-600 text-white font-bold border border-emerald-500";
               document.getElementById('btn-play').innerHTML = `
                 <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 20 20"><path d="M6.3 2.841A1.5 1.5 0 004 4.11v11.78a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z"/></svg>
                 재발표
@@ -974,22 +1068,19 @@ html
     }
 
     /* ====================================================================
-       완벽한 사진 저장 (웹 화면 그대로 1:1 고해상도 캡처)
+       사진 저장 (화면 그대로 2x 해상도 캡처)
        ==================================================================== */
     async function captureScreen() {
       const screenElem = document.getElementById('broadcast-screen');
       if (!screenElem) return;
 
-      // 1. 캡처 시에는 가려진 바가 없도록 모든 정당을 임시로 100% 공개 상태로 전환
       const prevRevealed = new Set(revealedParties);
       parties.forEach(p => revealedParties.add(p.id));
       renderScreen();
 
-      // CSS 렌더링 갱신 대기
       await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 
       try {
-        // html2canvas 옵션: 현재 웹 화면 크기 기반 고화질(scale: 2) 캡처
         const canvas = await html2canvas(screenElem, {
           scale: 2,
           useCORS: true,
@@ -1005,7 +1096,6 @@ html
       } catch (err) {
         console.error("사진 저장 중 오류:", err);
       } finally {
-        // 이전 발표 진행 상태로 복구
         revealedParties = prevRevealed;
         renderScreen();
       }
@@ -1040,7 +1130,7 @@ html
       document.getElementById('live-clock').innerText = now.toTimeString().split(' ')[0];
     }, 1000);
 
-    // 초기 기동
+    // 초기 실행
     window.onload = function() {
       renderPartyList();
       parties.forEach(p => revealedParties.add(p.id));
