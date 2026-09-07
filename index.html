@@ -140,23 +140,21 @@
         <input type="file" id="json-file-input" accept=".json" onchange="importFromJson(event)" class="hidden">
       </label>
 
-      <!-- 사진 저장 버튼군 -->
-      <div class="flex items-center gap-1.5">
-        <button id="btn-save-photo" onclick="captureScreen()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow transition active:scale-95" title="고화질 이미지 저장">
-          <svg id="save-icon" class="w-4 h-4 fill-none stroke-current" stroke-width="2" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-          </svg>
-          <span id="save-text">사진 저장</span>
-        </button>
+      <!-- 사진 저장 버튼 -->
+      <button id="btn-save-photo" onclick="captureScreen()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow transition active:scale-95" title="고화질 이미지 저장">
+        <svg id="save-icon" class="w-4 h-4 fill-none stroke-current" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+        </svg>
+        <span id="save-text">사진 저장</span>
+      </button>
 
-        <button onclick="captureWithDisplayMedia()" class="bg-teal-700 hover:bg-teal-600 text-white px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 shadow transition active:scale-95" title="화면 직접 캡처 (PC 전용)">
-          <svg class="w-3.5 h-3.5 fill-none stroke-current" stroke-width="2" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-            <path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-          </svg>
-          <span class="hidden md:inline">화면 캡처</span>
-        </button>
-      </div>
+      <!-- 영상 변환 버튼 (신규 추가) -->
+      <button id="btn-export-video" onclick="exportToVideo()" class="bg-purple-600 hover:bg-purple-500 text-white px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow transition active:scale-95" title="발표 애니메이션 과정을 영상(Video)으로 녹화 및 저장">
+        <svg class="w-4 h-4 fill-none stroke-current" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+        </svg>
+        <span id="video-btn-text">영상 변환</span>
+      </button>
 
       <!-- 전체화면 토글 -->
       <button onclick="toggleFullScreen()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1.5 rounded-lg border border-slate-700 text-xs font-semibold flex items-center gap-1" title="화면 꽉 차게 보기">
@@ -447,6 +445,39 @@
     </div>
   </div>
 
+  <!-- 영상 녹화 완료 모달 (신규 추가) -->
+  <div id="video-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 hidden flex items-center justify-center p-3 md:p-6">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-xl p-4 md:p-5 shadow-2xl flex flex-col gap-3">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+        <div class="flex items-center gap-2">
+          <span class="w-3 h-3 rounded-full bg-purple-500 animate-ping"></span>
+          <h3 class="text-sm md:text-base font-bold text-white">선거 발표 영상 변환 완료</h3>
+        </div>
+        <button onclick="closeVideoModal()" class="text-slate-400 hover:text-white text-xl font-bold px-2">&times;</button>
+      </div>
+
+      <!-- 생성된 영상 미리보기 플레이어 -->
+      <div class="w-full aspect-[16/9] bg-black rounded-lg overflow-hidden border border-slate-800 shadow-inner flex items-center justify-center">
+        <video id="preview-captured-video" controls autoplay loop class="w-full h-full object-contain"></video>
+      </div>
+
+      <div class="bg-slate-950 p-2.5 rounded-lg border border-slate-800 text-xs text-slate-300">
+        <p class="font-medium text-purple-300 mb-0.5">🎬 영상 저장 안내:</p>
+        <p class="text-[11px] text-slate-400">발표 애니메이션이 고화질 영상으로 변환되었습니다. 아래 <b>[영상 파일 다운로드]</b> 버튼을 누르면 비디오 파일이 저장됩니다.</p>
+      </div>
+
+      <div class="flex items-center justify-end gap-2 pt-1">
+        <button onclick="closeVideoModal()" class="px-3.5 py-2 rounded-lg text-slate-400 hover:text-white font-medium text-xs">닫기</button>
+        <a id="btn-modal-video-download" href="#" download="election_broadcast.webm" class="bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs px-4 py-2 rounded-lg shadow flex items-center gap-1.5 transition active:scale-95">
+          <svg class="w-4 h-4 fill-none stroke-current" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+          </svg>
+          <span>영상 파일 다운로드</span>
+        </a>
+      </div>
+    </div>
+  </div>
+
   <!-- 정당 추가/수정 모달 -->
   <div id="party-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
     <div class="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-md p-5 shadow-2xl space-y-4">
@@ -543,7 +574,7 @@
     function exportToJson() {
       const configData = {
         app: "German Election Graphics Simulator",
-        version: "3.2",
+        version: "3.5",
         exportedAt: new Date().toISOString(),
         settings: {
           currentStation,
@@ -1215,7 +1246,6 @@
 
       modal.classList.remove('hidden');
 
-      // PC 및 지원되는 브라우저에서는 파일 즉시 자동 다운로드 시도
       try {
         const link = document.createElement('a');
         link.download = filename;
@@ -1223,9 +1253,7 @@
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-      } catch (e) {
-        // 모바일 브라우저 정책으로 자동 클릭 차단되어도 모달에서 원터치 저장 가능
-      }
+      } catch (e) {}
     }
 
     function closeDownloadModal() {
@@ -1247,7 +1275,6 @@
       parties.forEach(p => revealedParties.add(p.id));
       renderScreen();
 
-      // CSS 렌더링 동기화 대기
       await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 
       const filename = `${currentStation}_${currentView === 'bar' ? 'Hochrechnung' : 'Sitzverteilung'}_${Date.now()}.png`;
@@ -1255,7 +1282,6 @@
       try {
         let dataUrl = null;
 
-        // 1차 시도: html2canvas (가장 범용적이고 모바일에서 멈춤 없음)
         try {
           const canvas = await html2canvas(screenElem, {
             scale: Math.min(window.devicePixelRatio || 1.5, 2),
@@ -1269,7 +1295,6 @@
           console.warn("html2canvas 실패, htmlToImage 시도:", h2cErr);
         }
 
-        // 2차 시도: html-to-image (만약 html2canvas가 실패할 경우)
         if (!dataUrl && window.htmlToImage) {
           dataUrl = await htmlToImage.toPng(screenElem, {
             pixelRatio: 2,
@@ -1294,73 +1319,7 @@
     }
 
     /* ====================================================================
-       화면 캡처 (Screen Capture API - PC 브라우저 전용)
-       ==================================================================== */
-    async function captureWithDisplayMedia() {
-      // 모바일 등 미지원 환경 감지 시 안전하게 일반 저장으로 전환
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
-        alert("현재 사용 중인 모바일 브라우저는 운영체제 보안상 '화면 캡처'를 지원하지 않습니다.\n대신 [사진 저장] 기능으로 고화질 이미지를 즉시 생성합니다.");
-        captureScreen();
-        return;
-      }
-
-      const screenElem = document.getElementById('broadcast-screen');
-      const prevRevealed = new Set(revealedParties);
-      parties.forEach(p => revealedParties.add(p.id));
-      renderScreen();
-
-      try {
-        const stream = await navigator.mediaDevices.getDisplayMedia({
-          video: { cursor: "never" },
-          audio: false
-        });
-
-        // 표준 <video> 요소를 사용하여 안전하게 프레임 캡처 (브라우저 호환성 100%)
-        const video = document.createElement('video');
-        video.srcObject = stream;
-        video.muted = true;
-        await video.play();
-
-        // 1프레임 대기 후 캔버스에 그리기
-        await new Promise(r => requestAnimationFrame(r));
-
-        const rect = screenElem.getBoundingClientRect();
-        const scaleX = video.videoWidth / window.innerWidth;
-        const scaleY = video.videoHeight / window.innerHeight;
-
-        const cropCanvas = document.createElement('canvas');
-        cropCanvas.width = rect.width * scaleX;
-        cropCanvas.height = rect.height * scaleY;
-        const ctx = cropCanvas.getContext('2d');
-
-        ctx.drawImage(
-          video,
-          rect.left * scaleX,
-          rect.top * scaleY,
-          rect.width * scaleX,
-          rect.height * scaleY,
-          0,
-          0,
-          cropCanvas.width,
-          cropCanvas.height
-        );
-
-        // 스트림 트랙 종료
-        stream.getTracks().forEach(t => t.stop());
-
-        const filename = `ScreenCapture_${currentStation}_${Date.now()}.png`;
-        const dataUrl = cropCanvas.toDataURL('image/png');
-        showDownloadModal(dataUrl, filename);
-      } catch (err) {
-        console.log("화면 캡처 취소/종료");
-      } finally {
-        revealedParties = prevRevealed;
-        renderScreen();
-      }
-    }
-
-    /* ====================================================================
-       동영상 변환 및 녹화 엔진 (MediaRecorder + Canvas CaptureStream)
+       동영상 변환 및 녹화 엔진 (MediaRecorder + Canvas Stream)
        ==================================================================== */
     let videoMediaRecorder = null;
     let videoRecordedChunks = [];
@@ -1377,7 +1336,6 @@
 
       modal.classList.remove('hidden');
 
-      // PC 브라우저 자동 다운로드 시도
       try {
         const link = document.createElement('a');
         link.download = filename;
@@ -1402,13 +1360,8 @@
       const screenElem = document.getElementById('broadcast-screen');
       if (!screenElem) return;
 
-      // MediaRecorder 지원 여부 확인
       if (!window.MediaRecorder) {
-        const toast = document.createElement('div');
-        toast.className = "fixed bottom-5 right-5 z-50 bg-rose-600 text-white px-4 py-2 rounded-lg text-xs font-bold shadow-lg";
-        toast.innerText = "현재 브라우저는 영상 녹화(MediaRecorder)를 지원하지 않습니다.";
-        document.body.appendChild(toast);
-        setTimeout(() => toast.remove(), 3000);
+        alert("현재 브라우저는 비디오 녹화(MediaRecorder) API를 지원하지 않습니다.\n대신 [사진 저장]을 이용해 주세요.");
         return;
       }
 
@@ -1419,23 +1372,26 @@
       videoBtn.disabled = true;
       videoBtnText.innerText = "녹화 중...";
 
-      // 녹화용 오프스크린 캔버스 생성 (1280x720 16:9 규격)
+      // 녹화용 오프스크린 캔버스 생성 (16:9 규격)
       const recCanvas = document.createElement('canvas');
       recCanvas.width = 1280;
       recCanvas.height = 720;
       const recCtx = recCanvas.getContext('2d');
 
-      const stream = recCanvas.captureStream(30); // 30 FPS 스트림
+      const stream = recCanvas.captureStream(25); // 25 FPS 스트림
 
-      // 최적의 지원 MIME 타입 선택
-      let mimeType = 'video/webm;codecs=vp9';
-      if (!MediaRecorder.isTypeSupported(mimeType)) {
-        mimeType = 'video/webm';
-        if (!MediaRecorder.isTypeSupported(mimeType)) {
-          mimeType = 'video/mp4';
-          if (!MediaRecorder.isTypeSupported(mimeType)) {
-            mimeType = '';
-          }
+      let mimeType = '';
+      const types = [
+        'video/webm;codecs=vp9',
+        'video/webm;codecs=vp8',
+        'video/webm',
+        'video/mp4;codecs=h264',
+        'video/mp4'
+      ];
+      for (const t of types) {
+        if (MediaRecorder.isTypeSupported(t)) {
+          mimeType = t;
+          break;
         }
       }
 
@@ -1452,18 +1408,29 @@
         }
       };
 
+      // 첫 프레임 초기 렌더링
+      resetAnimation();
+      try {
+        const initCanvas = await html2canvas(screenElem, { scale: 1, useCORS: true, allowTaint: true, logging: false });
+        recCtx.drawImage(initCanvas, 0, 0, recCanvas.width, recCanvas.height);
+      } catch (e) {}
+
       videoMediaRecorder.start(100);
 
-      // 애니메이션 초기화 후 녹화 시작
-      resetAnimation();
-
-      // 프레임 캡처 루프 가동
+      // 주기적 프레임 캡처 (약 20 FPS)
       let keepRecording = true;
-      async function captureFrameLoop() {
-        if (!keepRecording) return;
+      let isCapturingFrame = false;
+
+      const frameInterval = setInterval(async () => {
+        if (!keepRecording) {
+          clearInterval(frameInterval);
+          return;
+        }
+        if (isCapturingFrame) return;
+        isCapturingFrame = true;
         try {
           const frameCanvas = await html2canvas(screenElem, {
-            scale: 1.2,
+            scale: 1,
             useCORS: true,
             allowTaint: true,
             backgroundColor: null,
@@ -1472,19 +1439,14 @@
           recCtx.clearRect(0, 0, recCanvas.width, recCanvas.height);
           recCtx.drawImage(frameCanvas, 0, 0, recCanvas.width, recCanvas.height);
         } catch (err) {}
-        if (keepRecording) {
-          requestAnimationFrame(captureFrameLoop);
-        }
-      }
-
-      captureFrameLoop();
+        isCapturingFrame = false;
+      }, 50);
 
       // 발표 시작
       startBroadcastAnimation();
 
-      // 발표 시퀀스 총 시간 계산: (정당 수 * stepDelay) + 시작 대기 + 종료 여유
       const totalParties = parties.length;
-      const totalDurationMs = (orderMode === 'all' ? 1200 : (totalParties * stepDelay * 1000) + 1800);
+      const totalDurationMs = (orderMode === 'all' ? 1200 : (totalParties * stepDelay * 1000) + 1600);
 
       setTimeout(() => {
         keepRecording = false;
