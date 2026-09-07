@@ -47,7 +47,18 @@
       background: radial-gradient(circle at 50% 20%, #1d344d 0%, #132435 55%, #0d1824 100%);
     }
 
-    /* PPT 스타일 닦아내기(Wipe Up) 효과 */
+    /* PPT 스타일 닦아내기(Wipe Up) 효과 키프레임 및 클래스 */
+    @keyframes wipeUpFromBottom {
+      0% {
+        clip-path: inset(100% 0 0 0);
+      }
+      100% {
+        clip-path: inset(0 0 0 0);
+      }
+    }
+    .wipe-up-animating {
+      animation: wipeUpFromBottom 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+    }
     .wipe-up-active {
       clip-path: inset(0 0 0 0) !important;
     }
@@ -55,7 +66,7 @@
       clip-path: inset(100% 0 0 0) !important;
     }
     .wipe-transition {
-      transition: clip-path 0.75s cubic-bezier(0.16, 1, 0.3, 1);
+      transition: clip-path 0.8s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
     /* 스튜디오 디스플레이 외곽 그림자 */
@@ -874,7 +885,7 @@
           col.innerHTML = `
             <!-- 상단 바 영역 (높이 약 68%) -->
             <div class="w-full h-[68%] flex flex-col justify-end items-center">
-              <div class="w-full wipe-transition ${isRevealed ? 'wipe-up-active' : 'wipe-up-hidden'} rounded-none shadow-lg overflow-hidden flex flex-col justify-between"
+              <div id="bar-inner-${party.id}" class="w-full ${isRevealed ? 'wipe-up-active' : 'wipe-up-hidden'} rounded-none shadow-lg overflow-hidden flex flex-col justify-between"
                    style="height: ${barHeightPct}%; background-color: ${party.color};">
                 <!-- 상단 흰색 캡 (White Cap) -->
                 <div class="w-full h-1.5 bg-white shrink-0 shadow-sm"></div>
@@ -886,7 +897,7 @@
 
             <!-- 하단 독립 화이트 카드 (높이 약 30%) -->
             <div class="w-full h-[30%] bg-white rounded-none shadow-md flex flex-col justify-center items-center text-center px-1 border-t border-slate-200">
-              <div class="font-num font-black text-sm md:text-2xl lg:text-3xl text-slate-950 leading-tight py-0.5" dir="ltr">
+              <div id="val-percent-${party.id}" class="font-num font-black text-sm md:text-2xl lg:text-3xl text-slate-950 leading-tight py-0.5" dir="ltr">
                 ${isRevealed ? percentStr : '—'}
               </div>
               <div dir="auto" class="font-bold text-[11px] md:text-sm text-slate-800 tracking-tight pb-0.5 truncate w-full">
@@ -900,7 +911,7 @@
           col.innerHTML = `
             <!-- 상단 바 영역 (높이 약 65%) -->
             <div class="w-full h-[65%] flex flex-col justify-end items-center px-0.5">
-              <div class="w-full wipe-transition ${isRevealed ? 'wipe-up-active' : 'wipe-up-hidden'} border-[2.5px] border-white rounded-none shadow-md"
+              <div id="bar-inner-${party.id}" class="w-full ${isRevealed ? 'wipe-up-active' : 'wipe-up-hidden'} border-[2.5px] border-white rounded-none shadow-md"
                    style="height: ${barHeightPct}%; background-color: ${party.color};">
               </div>
             </div>
@@ -915,11 +926,11 @@
                 ${party.name}
               </div>
               <!-- 2단: 굵은 득표율 -->
-              <div class="font-num font-black text-sm md:text-2xl text-slate-950 leading-none py-0.5" dir="ltr">
+              <div id="val-percent-${party.id}" class="font-num font-black text-sm md:text-2xl text-slate-950 leading-none py-0.5" dir="ltr">
                 ${isRevealed ? percentStr : '—'}
               </div>
               <!-- 3단: 전회 대비 증감률 (회색 바탕) -->
-              <div class="py-0.5 text-[10px] md:text-xs font-num font-bold text-slate-700 bg-slate-100 border-t border-slate-200" dir="ltr">
+              <div id="val-diff-${party.id}" class="py-0.5 text-[10px] md:text-xs font-num font-bold text-slate-700 bg-slate-100 border-t border-slate-200" dir="ltr">
                 ${isRevealed ? diffStr : '—'}
               </div>
             </div>
@@ -1186,7 +1197,57 @@
     function resetAnimation() {
       clearTimers();
       revealedParties.clear();
-      renderScreen();
+      
+      // 화면 내 모든 바와 텍스트를 즉시 초기 미발표 상태로 리셋
+      parties.forEach(party => {
+        const barInner = document.getElementById(`bar-inner-${party.id}`);
+        const valPercent = document.getElementById(`val-percent-${party.id}`);
+        const valDiff = document.getElementById(`val-diff-${party.id}`);
+
+        if (barInner) {
+          barInner.classList.remove('wipe-up-animating', 'wipe-up-active');
+          barInner.classList.add('wipe-up-hidden');
+        }
+        if (valPercent) valPercent.innerText = '—';
+        if (valDiff) valDiff.innerText = '—';
+      });
+
+      if (currentView === 'seats') {
+        renderScreen();
+      }
+    }
+
+    function revealPartyWithWipe(partyId) {
+      revealedParties.add(partyId);
+      const party = parties.find(p => p.id === partyId);
+      if (!party) return;
+
+      if (currentView === 'bar') {
+        const barInner = document.getElementById(`bar-inner-${partyId}`);
+        const valPercent = document.getElementById(`val-percent-${partyId}`);
+        const valDiff = document.getElementById(`val-diff-${partyId}`);
+
+        if (barInner) {
+          // PPT 닦아내기(Wipe Up) 키프레임 애니메이션 실행
+          barInner.classList.remove('wipe-up-hidden', 'wipe-up-active');
+          // 강제 리플로우 후 애니메이션 클래스 부여
+          void barInner.offsetWidth;
+          barInner.classList.add('wipe-up-animating');
+        }
+
+        if (valPercent) {
+          const percentStr = party.percent.toFixed(1).replace('.', ',');
+          valPercent.innerText = percentStr;
+        }
+
+        if (valDiff) {
+          const diffNum = party.diff;
+          const diffStr = (diffNum >= 0 ? '+' : '') + diffNum.toFixed(1).replace('.', ',');
+          valDiff.innerText = diffStr;
+        }
+      } else {
+        renderSeatsGraphic(parseInt(document.getElementById('meta-total-seats').value) || 83);
+      }
     }
 
     function startBroadcastAnimation() {
@@ -1195,8 +1256,8 @@
         return;
       }
 
-      revealedParties.clear();
-      renderScreen();
+      // 화면 초기화 및 숨김 상태 적용
+      resetAnimation();
 
       isBroadcasting = true;
       const badge = document.getElementById('anim-status-badge');
@@ -1211,13 +1272,12 @@
       if (orderMode === 'votes') {
         seq.sort((a, b) => b.percent - a.percent);
       } else if (orderMode === 'all') {
-        seq.forEach(p => revealedParties.add(p.id));
-        renderScreen();
+        seq.forEach(p => revealPartyWithWipe(p.id));
         setTimeout(() => {
           clearTimers();
           badge.innerText = "완료";
           badge.className = "text-[11px] px-2.5 py-1 rounded-md bg-emerald-600 text-white font-bold border border-emerald-500";
-        }, 800);
+        }, 850);
         return;
       }
 
@@ -1225,8 +1285,7 @@
 
       seq.forEach((party, idx) => {
         const timer = setTimeout(() => {
-          revealedParties.add(party.id);
-          renderScreen();
+          revealPartyWithWipe(party.id);
 
           if (idx === seq.length - 1) {
             setTimeout(() => {
@@ -1237,7 +1296,7 @@
                 <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 20 20"><path d="M6.3 2.841A1.5 1.5 0 004 4.11v11.78a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z"/></svg>
                 재발표
               `;
-            }, 600);
+            }, 850);
           }
         }, 200 + (idx * stepMs));
 
