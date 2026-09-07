@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>독일 선거 방송 그래픽 시뮬레이터 (ARD / ZDF)</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- 고화질 스크린샷 캡처 라이브러리 (html2canvas 대체 및 아랍어 자음 분리 방지용 html-to-image) -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js"></script>
+  <!-- 고화질 스크린샷 캡처 라이브러리 -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js"></script>
   
   <!-- 전 세계 언어 및 아랍어·한·중·일·히브리·태국·힌디어 100% 지원 Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -74,12 +74,6 @@
       box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.9), 0 0 35px rgba(25, 118, 210, 0.25);
     }
 
-    /* 캡처 시 트랜지션 지연 오차 방지용 클래스 */
-    .no-transitions * {
-      transition: none !important;
-      animation: none !important;
-    }
-
     ::-webkit-scrollbar {
       width: 6px;
       height: 6px;
@@ -137,15 +131,25 @@
         <span>JSON 저장</span>
       </button>
 
-      <!-- 사진 저장 버튼군 (일반 저장 + 화면 직접 캡처) -->
-      <div class="flex items-center gap-1">
-        <button onclick="captureScreen()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow transition active:scale-95" title="아랍어 분리 없는 고화질 이미지 저장">
-          <svg class="w-4 h-4 fill-none stroke-current" stroke-width="2" viewBox="0 0 24 24">
+      <!-- JSON 불러오기 버튼 -->
+      <label class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 border border-slate-700 cursor-pointer shadow transition active:scale-95" title="설정 JSON 불러오기">
+        <svg class="w-4 h-4 fill-none stroke-current" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+        </svg>
+        <span>JSON 불러오기</span>
+        <input type="file" id="json-file-input" accept=".json" onchange="importFromJson(event)" class="hidden">
+      </label>
+
+      <!-- 사진 저장 버튼군 -->
+      <div class="flex items-center gap-1.5">
+        <button id="btn-save-photo" onclick="captureScreen()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow transition active:scale-95" title="고화질 이미지 저장">
+          <svg id="save-icon" class="w-4 h-4 fill-none stroke-current" stroke-width="2" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
           </svg>
-          <span>사진 저장</span>
+          <span id="save-text">사진 저장</span>
         </button>
-        <button onclick="captureWithDisplayMedia()" class="bg-teal-700 hover:bg-teal-600 text-white px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 shadow transition active:scale-95" title="실제 모니터/화면 직접 캡처">
+
+        <button onclick="captureWithDisplayMedia()" class="bg-teal-700 hover:bg-teal-600 text-white px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 shadow transition active:scale-95" title="화면 직접 캡처 (PC 전용)">
           <svg class="w-3.5 h-3.5 fill-none stroke-current" stroke-width="2" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
             <path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -208,9 +212,7 @@
 
           <!-- ARD 헤더 (1번 & 4번 원본 사진 100% 동일 그래픽 구조) -->
           <div id="header-ard" class="hidden flex-col w-full h-full justify-between">
-            <!-- 상단 바: 좌측 WAHL 2026 + 우측 그라데이션 바(지역명 + 1 로고) -->
             <div class="w-full flex items-center justify-between">
-              <!-- WAHL + 2026 사각 박스 -->
               <div class="flex items-center gap-2">
                 <span id="disp-ard-title-word" class="font-black text-2xl md:text-4xl text-white tracking-tighter">
                   WAHL
@@ -220,19 +222,16 @@
                 </span>
               </div>
 
-              <!-- 우측 블루 그라데이션 바 (지역명 + ARD 1 로고) -->
               <div class="flex items-center gap-3 bg-gradient-to-r from-[#173e6d]/40 via-[#1d4c82]/90 to-[#2b68ad] px-4 py-1 rounded-sm border-b border-white/30 shadow-md min-w-[220px] md:min-w-[320px] justify-between">
                 <span id="disp-ard-region" dir="auto" class="font-bold text-base md:text-xl text-white tracking-wide">
                   Sachsen-Anhalt
                 </span>
-                <!-- ARD 1 투명 원형 로고 -->
                 <div class="w-6 h-6 md:w-8 md:h-8 rounded-full border-2 border-white/90 flex items-center justify-center font-bold text-xs md:text-base text-white shrink-0">
                   1
                 </div>
               </div>
             </div>
 
-            <!-- 하단 반투명 아이스 블루 서브바 (Prognose | in %) -->
             <div class="w-full bg-white/20 backdrop-blur-sm px-3.5 py-1 flex items-center justify-between text-xs md:text-sm font-bold text-white border-y border-white/25 shadow-sm mt-1">
               <span id="disp-ard-sub" dir="auto">Prognose</span>
               <span id="disp-ard-unit" dir="auto">in %</span>
@@ -243,36 +242,31 @@
 
         <!-- ======================= 2. 중앙 메인 그래픽 영역 (높이 약 72%) ======================= -->
         
-        <!-- [A] 득표율 바 차트 모드: 바와 카드가 완벽하게 1열(Column)로 묶인 지능형 그리드 -->
+        <!-- [A] 득표율 바 차트 모드 -->
         <div id="view-barchart" class="relative z-10 w-full h-[72%] flex items-end justify-center shrink-0">
           <div id="parties-main-container" class="w-full h-full flex items-end justify-center px-1">
-            <!-- JS 동적 렌더링: 바와 하단 카드가 일체형 컬럼으로 생성됨 -->
+            <!-- JS 동적 렌더링 -->
           </div>
         </div>
 
         <!-- [B] 의석수 반원 모드 (Sitzverteilung) -->
         <div id="view-seatschart" class="hidden relative z-10 w-full h-[72%] flex flex-col items-center justify-between shrink-0">
-          <!-- 반원형 의석 아치 다이어그램 -->
           <div class="relative w-full max-w-[480px] aspect-[2/1] flex items-end justify-center">
             <svg id="parliament-svg" viewBox="0 0 400 205" class="w-full h-full filter drop-shadow-xl overflow-visible"></svg>
 
-            <!-- ZDF 스타일 중앙 반원 홀 (숫자만 크게 강조) -->
             <div id="seats-center-badge" class="absolute bottom-0 flex flex-col items-center justify-center bg-[#13253a] border-2 border-slate-600 rounded-t-full w-24 h-12 md:w-32 md:h-16 px-2 shadow-inner">
               <span id="seats-center-total" class="font-num text-2xl md:text-4xl font-black text-white leading-none">83</span>
             </div>
           </div>
 
-          <!-- 하단 의석수 카드 -->
           <div id="seats-cards-container" class="w-full h-[32%] flex items-stretch justify-center gap-1.5 md:gap-3"></div>
         </div>
 
         <!-- ======================= 3. 하단 푸터 / 출처 (높이 약 6%) ======================= -->
         <div id="screen-footer" class="relative z-10 w-full h-[6%] flex items-center justify-between shrink-0 text-[10px] md:text-xs">
-          <!-- ARD 의석수 전용 대형 로고 (4번 사진 완벽 일치: 카드 아래 좌측 배치) -->
           <div id="disp-ard-big-logo" dir="auto" class="hidden font-black text-lg md:text-2xl text-white/90 tracking-tighter leading-none">
             WAHL 2026
           </div>
-          <!-- 출처 텍스트 -->
           <div class="flex items-center gap-2 text-slate-300 font-medium">
             <span id="disp-source" dir="auto">Quelle: Forschungsgruppe Wahlen</span>
           </div>
@@ -311,7 +305,6 @@
           <label class="text-slate-400 font-medium">정당 간 대기 시간:</label>
           <span id="delay-label" class="font-bold text-amber-400 w-12 text-center font-num">1.0초</span>
           <input type="range" id="delay-slider" min="0.3" max="10.0" step="0.1" value="1.0" oninput="updateDelay(this.value)" class="w-28 accent-amber-500 cursor-pointer">
-          <!-- 1초, 3초, 5초, 7초 빠른 선택 버튼 -->
           <div class="flex items-center gap-1">
             <button type="button" onclick="setQuickDelay(1.0)" class="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-num border border-slate-700 transition">1초</button>
             <button type="button" onclick="setQuickDelay(3.0)" class="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-num border border-slate-700 transition">3초</button>
@@ -409,7 +402,6 @@
           </button>
         </div>
 
-        <!-- 정당 스크롤 목록 -->
         <div id="party-list-container" class="flex-1 overflow-y-auto space-y-1.5 pr-1 max-h-[260px]"></div>
 
         <div class="mt-3 pt-2 border-t border-slate-800 text-[11px] text-slate-400 flex justify-between">
@@ -420,6 +412,40 @@
 
     </section>
   </main>
+
+  <!-- 저장 완료 / 이미지 다운로드 모달 (모바일 완벽 대응) -->
+  <div id="download-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 hidden flex items-center justify-center p-3 md:p-6">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-xl p-4 md:p-5 shadow-2xl flex flex-col gap-3">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+        <div class="flex items-center gap-2">
+          <span class="w-3 h-3 rounded-full bg-emerald-500 animate-ping"></span>
+          <h3 class="text-sm md:text-base font-bold text-white">방송 그래픽 이미지 저장</h3>
+        </div>
+        <button onclick="closeDownloadModal()" class="text-slate-400 hover:text-white text-xl font-bold px-2">&times;</button>
+      </div>
+
+      <!-- 생성된 이미지 미리보기 -->
+      <div class="w-full aspect-[16/9] bg-black rounded-lg overflow-hidden border border-slate-800 shadow-inner flex items-center justify-center">
+        <img id="preview-captured-img" src="" alt="Captured election graphics" class="w-full h-full object-contain">
+      </div>
+
+      <!-- 설명 및 저장 버튼 -->
+      <div class="bg-slate-950 p-2.5 rounded-lg border border-slate-800 text-xs text-slate-300">
+        <p class="font-medium text-amber-300 mb-0.5">💡 저장 안내:</p>
+        <p class="text-[11px] text-slate-400">아래 <b>[이미지 파일 다운로드]</b> 버튼을 누르거나, 모바일에서는 위 이미지를 <b>길게 터치</b>하여 [사진 저장 / 이미지 다운로드]를 선택할 수 있습니다.</p>
+      </div>
+
+      <div class="flex items-center justify-end gap-2 pt-1">
+        <button onclick="closeDownloadModal()" class="px-3.5 py-2 rounded-lg text-slate-400 hover:text-white font-medium text-xs">닫기</button>
+        <a id="btn-modal-direct-download" href="#" download="election_graphic.png" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2 rounded-lg shadow flex items-center gap-1.5 transition active:scale-95">
+          <svg class="w-4 h-4 fill-none stroke-current" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+          </svg>
+          <span>이미지 파일 다운로드</span>
+        </a>
+      </div>
+    </div>
+  </div>
 
   <!-- 정당 추가/수정 모달 -->
   <div id="party-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
@@ -488,109 +514,6 @@
 
   <script>
     /* ====================================================================
-       아랍어(Arabic) / RTL 문자 100% 결합 및 BiDi 정렬 보정 엔진
-       ==================================================================== */
-    const ARABIC_GLYPH_MAP = {
-      0x0621: [0xFE80], 0x0622: [0xFE81, 0xFE82], 0x0623: [0xFE83, 0xFE84],
-      0x0624: [0xFE85, 0xFE86], 0x0625: [0xFE87, 0xFE88], 0x0626: [0xFE89, 0xFE8A, 0xFE8C, 0xFE8B],
-      0x0627: [0xFE8D, 0xFE8E], 0x0628: [0xFE8F, 0xFE90, 0xFE92, 0xFE91], 0x0629: [0xFE93, 0xFE94],
-      0x062A: [0xFE95, 0xFE96, 0xFE98, 0xFE97], 0x062B: [0xFE99, 0xFE9A, 0xFE9C, 0xFE9B],
-      0x062C: [0xFE9D, 0xFE9E, 0xFEA0, 0xFE9F], 0x062D: [0xFEA1, 0xFEA2, 0xFEA4, 0xFEA3],
-      0x062E: [0xFEA5, 0xFEA6, 0xFEA8, 0xFEA7], 0x062F: [0xFEA9, 0xFEAA], 0x0630: [0xFEAB, 0xFEAC],
-      0x0631: [0xFEAD, 0xFEAE], 0x0632: [0xFEAF, 0xFEB0], 0x0633: [0xFEB1, 0xFEB2, 0xFEB4, 0xFEB3],
-      0x0634: [0xFEB5, 0xFEB6, 0xFEB8, 0xFEB7], 0x0635: [0xFEB9, 0xFEBA, 0xFEBC, 0xFEBB],
-      0x0636: [0xFEBD, 0xFEBE, 0xFEC0, 0xFEBF], 0x0637: [0xFEC1, 0xFEC2, 0xFEC4, 0xFEC3],
-      0x0638: [0xFEC5, 0xFEC6, 0xFEC8, 0xFEC7], 0x0639: [0xFEC9, 0xFECA, 0xFECC, 0xFECB],
-      0x063A: [0xFECD, 0xFECE, 0xFED0, 0xFECF], 0x0641: [0xFED1, 0xFED2, 0xFED4, 0xFED3],
-      0x0642: [0xFED5, 0xFED6, 0xFED8, 0xFED7], 0x0643: [0xFED9, 0xFEDA, 0xFEDC, 0xFEDB],
-      0x0644: [0xFEDD, 0xFEDE, 0xFEE0, 0xFEDF], 0x0645: [0xFEE1, 0xFEE2, 0xFEE4, 0xFEE3],
-      0x0646: [0xFEE5, 0xFEE6, 0xFEE8, 0xFEE7], 0x0647: [0xFEE9, 0xFEEA, 0xFEEC, 0xFEEB],
-      0x0648: [0xFEED, 0xFEEE], 0x0649: [0xFEEF, 0xFEF0], 0x064A: [0xFEF1, 0xFEF2, 0xFEF4, 0xFEF3],
-      0x067E: [0xFB56, 0xFB57, 0xFB59, 0xFB58], 0x0686: [0xFB7A, 0xFB7B, 0xFB7D, 0xFB7C],
-      0x0698: [0xFB8A, 0xFB8B], 0x06AF: [0xFB92, 0xFB93, 0xFB95, 0xFB94],
-      0x06A9: [0xFB8E, 0xFB8F, 0xFB91, 0xFB90], 0x06CC: [0xFBFC, 0xFBFD, 0xFBFF, 0xFBFE]
-    };
-
-    function hasRTLChars(str) {
-      if (!str) return false;
-      return /[\u0590-\u05FF\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFC]/.test(str);
-    }
-
-    function reshapeArabicWord(word) {
-      let result = [];
-      for (let i = 0; i < word.length; i++) {
-        const code = word.charCodeAt(i);
-        const prevCode = i > 0 ? word.charCodeAt(i - 1) : null;
-        const nextCode = i < word.length - 1 ? word.charCodeAt(i + 1) : null;
-
-        if (code === 0x0644 && nextCode) {
-          let laMap = null;
-          if (nextCode === 0x0622) laMap = [0xFEF5, 0xFEF6];
-          else if (nextCode === 0x0623) laMap = [0xFEF7, 0xFEF8];
-          else if (nextCode === 0x0625) laMap = [0xFEF9, 0xFEFA];
-          else if (nextCode === 0x0627) laMap = [0xFEFB, 0xFEFC];
-
-          if (laMap) {
-            const connectsRight = prevCode && ARABIC_GLYPH_MAP[prevCode] && ARABIC_GLYPH_MAP[prevCode].length === 4;
-            result.push(String.fromCharCode(connectsRight ? laMap[1] : laMap[0]));
-            i++;
-            continue;
-          }
-        }
-
-        const mapping = ARABIC_GLYPH_MAP[code];
-        if (!mapping) {
-          result.push(word[i]);
-          continue;
-        }
-
-        const connectsRight = prevCode && ARABIC_GLYPH_MAP[prevCode] && ARABIC_GLYPH_MAP[prevCode].length === 4;
-        const connectsLeft = mapping.length === 4 && nextCode && ARABIC_GLYPH_MAP[nextCode] && nextCode !== 0x0621;
-
-        let glyphCode;
-        if (connectsRight && connectsLeft) glyphCode = mapping[2];
-        else if (connectsRight) glyphCode = mapping[1];
-        else if (connectsLeft) glyphCode = mapping[3];
-        else glyphCode = mapping[0];
-
-        result.push(String.fromCharCode(glyphCode || mapping[0]));
-      }
-      return result.join('');
-    }
-
-    function processRTLForCanvas(text) {
-      if (!hasRTLChars(text)) return text;
-      const tokens = text.split(/(\s+)/);
-      const processed = tokens.map(t => {
-        if (/[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF]/.test(t)) {
-          return reshapeArabicWord(t).split('').reverse().join('');
-        } else if (/[\u0590-\u05FF]/.test(t)) {
-          return t.split('').reverse().join('');
-        }
-        return t;
-      });
-      return processed.reverse().join('');
-    }
-
-    function applyRTLFixToClonedDOM(node) {
-      if (node.nodeType === Node.TEXT_NODE) {
-        if (hasRTLChars(node.nodeValue)) {
-          node.nodeValue = processRTLForCanvas(node.nodeValue);
-        }
-        return;
-      }
-      if (node.nodeType === Node.ELEMENT_NODE) {
-        if (node.classList && node.classList.contains('font-num')) return;
-        if (hasRTLChars(node.textContent)) {
-          node.style.direction = 'ltr';
-        }
-        for (let child of Array.from(node.childNodes)) {
-          applyRTLFixToClonedDOM(child);
-        }
-      }
-    }
-
-    /* ====================================================================
        기본 데이터 (원본 방송 수치와 색상 매핑)
        ==================================================================== */
     const DEFAULT_PARTIES = [
@@ -620,7 +543,7 @@
     function exportToJson() {
       const configData = {
         app: "German Election Graphics Simulator",
-        version: "3.1",
+        version: "3.2",
         exportedAt: new Date().toISOString(),
         settings: {
           currentStation,
@@ -819,7 +742,7 @@
       document.getElementById('disp-zdf-region').innerText = region;
       document.getElementById('disp-zdf-subdate').innerText = document.getElementById('meta-zdf-subdate').value;
 
-      // ARD 텍스트 동기화 (Prognose 및 단위 표기 완벽 반영)
+      // ARD 텍스트 동기화
       const ardTitleVal = document.getElementById('meta-ard-title').value;
       const ardYearVal = document.getElementById('meta-ard-year').value;
       const ardSubVal = document.getElementById('meta-ard-sub').value;
@@ -840,8 +763,7 @@
     }
 
     /* ====================================================================
-       [핵심 수정] 1열 일체형 통합 바 차트 렌더러 (위치 어긋남 100% 원천 차단)
-       - 바의 너비 = 카드의 너비 = 동일 컬럼 안에서 완벽 정렬
+       1열 일체형 통합 바 차트 렌더러
        ==================================================================== */
     function renderIntegratedBarGraphic() {
       const container = document.getElementById('parties-main-container');
@@ -852,7 +774,6 @@
       const maxVal = Math.max(...parties.map(p => p.percent), 46);
       const count = parties.length;
 
-      // 정당 수에 따른 최적의 컬럼 너비 계산 (2~3개일 때도 화면 전체로 안 퍼지고 예쁘게 배치)
       let colWidthClass = "flex-1 max-w-[135px]";
       if (count <= 2) {
         colWidthClass = "w-[150px] md:w-[170px]";
@@ -860,8 +781,6 @@
         colWidthClass = "flex-1 max-w-[155px]";
       }
 
-      // ARD는 정당 간 간격이 없고 하단 테이블이 하나로 이어짐
-      // ZDF는 카드 사이에 실제 방송처럼 일정한 간격(gap-1.5 md:gap-2.5)이 존재함
       if (currentStation === 'ARD') {
         container.className = "w-full h-full flex items-end justify-center px-1";
       } else {
@@ -876,26 +795,20 @@
         const diffNum = party.diff;
         const diffStr = (diffNum >= 0 ? '+' : '') + diffNum.toFixed(1).replace('.', ',');
 
-        // 1개 정당을 구성하는 전체 수직 컬럼 (바 + 카드 완전 일체화)
         const col = document.createElement('div');
         col.className = `${colWidthClass} h-full flex flex-col justify-end items-center shrink-0`;
 
         if (currentStation === 'ZDF') {
-          // ==================== ZDF 스타일 (2번 사진 완벽 일치) ====================
           col.innerHTML = `
-            <!-- 상단 바 영역 (높이 약 68%) -->
             <div class="w-full h-[68%] flex flex-col justify-end items-center">
               <div id="bar-inner-${party.id}" class="w-full ${isRevealed ? 'wipe-up-active' : 'wipe-up-hidden'} rounded-none shadow-lg overflow-hidden flex flex-col justify-between"
                    style="height: ${barHeightPct}%; background-color: ${party.color};">
-                <!-- 상단 흰색 캡 (White Cap) -->
                 <div class="w-full h-1.5 bg-white shrink-0 shadow-sm"></div>
               </div>
             </div>
 
-            <!-- 바와 카드 사이의 미세한 간격/바닥선 -->
             <div class="w-full h-1"></div>
 
-            <!-- 하단 독립 화이트 카드 (높이 약 30%) -->
             <div class="w-full h-[30%] bg-white rounded-none shadow-md flex flex-col justify-center items-center text-center px-1 border-t border-slate-200">
               <div id="val-percent-${party.id}" class="font-num font-black text-sm md:text-2xl lg:text-3xl text-slate-950 leading-tight py-0.5" dir="ltr">
                 ${isRevealed ? percentStr : '—'}
@@ -906,30 +819,22 @@
             </div>
           `;
         } else {
-          // ==================== ARD 스타일 (1번 사진 완벽 일치) ====================
-          // 바와 하단 테이블이 완벽하게 1:1로 맞닿아 있으며 정당 컬러 띠가 경계선 역할을 함
           col.innerHTML = `
-            <!-- 상단 바 영역 (높이 약 65%) -->
             <div class="w-full h-[65%] flex flex-col justify-end items-center px-0.5">
               <div id="bar-inner-${party.id}" class="w-full ${isRevealed ? 'wipe-up-active' : 'wipe-up-hidden'} border-[2.5px] border-white rounded-none shadow-md"
                    style="height: ${barHeightPct}%; background-color: ${party.color};">
               </div>
             </div>
 
-            <!-- 바 바로 아래 정당 컬러 가로 띠 (두께 8px) -->
             <div class="w-full h-2 shadow-sm" style="background-color: ${party.color};"></div>
 
-            <!-- 하단 3단 일체형 화이트 패널 (정당명 / 득표율 / 증감률) (높이 약 32%) -->
             <div class="w-full h-[32%] bg-white rounded-none shadow-lg flex flex-col justify-between text-center border-r border-slate-300 ${idx === 0 ? 'border-l' : ''}">
-              <!-- 1단: 정당명 -->
               <div dir="auto" class="font-bold text-[11px] md:text-sm text-slate-900 py-0.5 truncate px-0.5 border-b border-slate-200">
                 ${party.name}
               </div>
-              <!-- 2단: 굵은 득표율 -->
               <div id="val-percent-${party.id}" class="font-num font-black text-sm md:text-2xl text-slate-950 leading-none py-0.5" dir="ltr">
                 ${isRevealed ? percentStr : '—'}
               </div>
-              <!-- 3단: 전회 대비 증감률 (회색 바탕) -->
               <div id="val-diff-${party.id}" class="py-0.5 text-[10px] md:text-xs font-num font-bold text-slate-700 bg-slate-100 border-t border-slate-200" dir="ltr">
                 ${isRevealed ? diffStr : '—'}
               </div>
@@ -941,7 +846,7 @@
       });
     }
 
-    // [B] 의석수 렌더링 (반원 아치 다이어그램 + 의석수 카드)
+    // [B] 의석수 렌더링
     function renderSeatsGraphic(totalSeats) {
       const svg = document.getElementById('parliament-svg');
       const cardsContainer = document.getElementById('seats-cards-container');
@@ -964,7 +869,6 @@
       const outerR = 175;
       const innerR = 90;
 
-      // 원내 진출 의석 정당만 선별
       const activeParties = parties.filter(p => p.seats > 0);
       const calculatedTotal = activeParties.reduce((s, p) => s + p.seats, 0) || totalSeats;
 
@@ -1004,14 +908,12 @@
         currentAngle = nextAngle;
       });
 
-      // 하단 의석수 카드: 원내 진출 정당만 깔끔하게 표시
       activeParties.forEach(party => {
         const isRevealed = revealedParties.has(party.id);
         const card = document.createElement('div');
         card.className = "flex-1 max-w-[135px] h-full rounded-none overflow-hidden text-center shadow-lg shrink-0 flex flex-col justify-between";
 
         if (currentStation === 'ZDF') {
-          // ZDF (3번 사진): 흰색 의석수 상단 박스 + 컬러 띠 + 하단 연회색 정당명
           card.innerHTML = `
             <div class="bg-white flex-1 flex items-center justify-center py-1">
               <span class="font-num font-black text-base md:text-2xl text-slate-950 leading-none" dir="ltr">
@@ -1024,7 +926,6 @@
             </div>
           `;
         } else {
-          // ARD (4번 사진): 상단 컬러 띠 + 정당명 + 볼드 의석수
           card.innerHTML = `
             <div class="h-2 w-full" style="background-color: ${party.color};"></div>
             <div class="bg-white flex-1 flex flex-col justify-center py-1 border-b border-slate-200 px-0.5">
@@ -1198,7 +1099,6 @@
       clearTimers();
       revealedParties.clear();
       
-      // 화면 내 모든 바와 텍스트를 즉시 초기 미발표 상태로 리셋
       parties.forEach(party => {
         const barInner = document.getElementById(`bar-inner-${party.id}`);
         const valPercent = document.getElementById(`val-percent-${party.id}`);
@@ -1228,9 +1128,7 @@
         const valDiff = document.getElementById(`val-diff-${partyId}`);
 
         if (barInner) {
-          // PPT 닦아내기(Wipe Up) 키프레임 애니메이션 실행
           barInner.classList.remove('wipe-up-hidden', 'wipe-up-active');
-          // 강제 리플로우 후 애니메이션 클래스 부여
           void barInner.offsetWidth;
           barInner.classList.add('wipe-up-animating');
         }
@@ -1256,7 +1154,6 @@
         return;
       }
 
-      // 화면 초기화 및 숨김 상태 적용
       resetAnimation();
 
       isBroadcasting = true;
@@ -1305,76 +1202,104 @@
     }
 
     /* ====================================================================
-       사진 저장 엔진 1: 브라우저 네이티브 렌더러(html-to-image)
-       - 아랍어 자음 분리(حروف متقطعة) 0% 완벽 해결
+       사진 저장 모달 및 다운로드 엔진 (모바일/PC 100% 무조건 저장 보장)
        ==================================================================== */
+    function showDownloadModal(dataUrl, filename) {
+      const modal = document.getElementById('download-modal');
+      const img = document.getElementById('preview-captured-img');
+      const directBtn = document.getElementById('btn-modal-direct-download');
+
+      img.src = dataUrl;
+      directBtn.href = dataUrl;
+      directBtn.download = filename;
+
+      modal.classList.remove('hidden');
+
+      // PC 및 지원되는 브라우저에서는 파일 즉시 자동 다운로드 시도
+      try {
+        const link = document.createElement('a');
+        link.download = filename;
+        link.href = dataUrl;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } catch (e) {
+        // 모바일 브라우저 정책으로 자동 클릭 차단되어도 모달에서 원터치 저장 가능
+      }
+    }
+
+    function closeDownloadModal() {
+      document.getElementById('download-modal').classList.add('hidden');
+    }
+
     async function captureScreen() {
       const screenElem = document.getElementById('broadcast-screen');
       if (!screenElem) return;
 
-      if (document.fonts) {
-        await document.fonts.ready;
-      }
+      const saveBtn = document.getElementById('btn-save-photo');
+      const saveText = document.getElementById('save-text');
+      const originalText = saveText.innerText;
+      saveText.innerText = "생성 중...";
+      saveBtn.disabled = true;
 
-      // 미발표 정당 100% 공개
+      // 미발표 정당 100% 노출
       const prevRevealed = new Set(revealedParties);
       parties.forEach(p => revealedParties.add(p.id));
       renderScreen();
 
+      // CSS 렌더링 동기화 대기
       await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 
       const filename = `${currentStation}_${currentView === 'bar' ? 'Hochrechnung' : 'Sitzverteilung'}_${Date.now()}.png`;
 
       try {
-        // html-to-image 방식 우선 시도 (SVG foreignObject 기반으로 아랍어 연결형 글자 100% 보존)
-        if (window.htmlToImage) {
-          const dataUrl = await htmlToImage.toPng(screenElem, {
-            pixelRatio: 2,
-            backgroundColor: null,
-            cacheBust: true,
-            filter: (node) => {
-              return true;
-            }
-          });
-          downloadDataUrl(dataUrl, filename);
-        } else {
-          // fallback: html2canvas
+        let dataUrl = null;
+
+        // 1차 시도: html2canvas (가장 범용적이고 모바일에서 멈춤 없음)
+        try {
           const canvas = await html2canvas(screenElem, {
-            scale: 2,
+            scale: Math.min(window.devicePixelRatio || 1.5, 2),
             useCORS: true,
+            allowTaint: true,
             backgroundColor: null,
             logging: false
           });
-          downloadDataUrl(canvas.toDataURL('image/png'), filename);
+          dataUrl = canvas.toDataURL('image/png');
+        } catch (h2cErr) {
+          console.warn("html2canvas 실패, htmlToImage 시도:", h2cErr);
+        }
+
+        // 2차 시도: html-to-image (만약 html2canvas가 실패할 경우)
+        if (!dataUrl && window.htmlToImage) {
+          dataUrl = await htmlToImage.toPng(screenElem, {
+            pixelRatio: 2,
+            backgroundColor: null
+          });
+        }
+
+        if (dataUrl) {
+          showDownloadModal(dataUrl, filename);
+        } else {
+          alert("이미지 생성에 실패했습니다. 다시 시도해 주세요.");
         }
       } catch (err) {
-        console.warn("htmlToImage 실패, html2canvas 대체 시도:", err);
-        try {
-          const canvas = await html2canvas(screenElem, { scale: 2, useCORS: true, backgroundColor: null });
-          downloadDataUrl(canvas.toDataURL('image/png'), filename);
-        } catch (e2) {
-          console.error("사진 저장 실패:", e2);
-        }
+        console.error("사진 저장 중 오류:", err);
+        alert("사진 저장 중 오류가 발생했습니다: " + err.message);
       } finally {
         revealedParties = prevRevealed;
         renderScreen();
+        saveText.innerText = originalText;
+        saveBtn.disabled = false;
       }
     }
 
-    function downloadDataUrl(dataUrl, filename) {
-      const link = document.createElement('a');
-      link.download = filename;
-      link.href = dataUrl;
-      link.click();
-    }
-
     /* ====================================================================
-       사진 저장 엔진 2: 실제 화면 직접 캡처 (Screen Capture API)
-       - 사용자가 제안한 '진짜 화면 캡처' 방식
+       화면 캡처 (Screen Capture API - PC 브라우저 전용)
        ==================================================================== */
     async function captureWithDisplayMedia() {
+      // 모바일 등 미지원 환경 감지 시 안전하게 일반 저장으로 전환
       if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
-        // 모바일 등 미지원 브라우저는 네이티브 저장으로 안내
+        alert("현재 사용 중인 모바일 브라우저는 운영체제 보안상 '화면 캡처'를 지원하지 않습니다.\n대신 [사진 저장] 기능으로 고화질 이미지를 즉시 생성합니다.");
         captureScreen();
         return;
       }
@@ -1385,21 +1310,23 @@
       renderScreen();
 
       try {
-        // 화면 공유 스트림 생성 (1프레임 캡처용)
         const stream = await navigator.mediaDevices.getDisplayMedia({
           video: { cursor: "never" },
           audio: false
         });
 
-        const track = stream.getVideoTracks()[0];
-        const imageCapture = new ImageCapture(track);
-        const bitmap = await imageCapture.grabFrame();
-        track.stop();
+        // 표준 <video> 요소를 사용하여 안전하게 프레임 캡처 (브라우저 호환성 100%)
+        const video = document.createElement('video');
+        video.srcObject = stream;
+        video.muted = true;
+        await video.play();
 
-        // 캔버스에 방송 스크린 요소의 화면상 좌표 영역만 크롭
+        // 1프레임 대기 후 캔버스에 그리기
+        await new Promise(r => requestAnimationFrame(r));
+
         const rect = screenElem.getBoundingClientRect();
-        const scaleX = bitmap.width / window.innerWidth;
-        const scaleY = bitmap.height / window.innerHeight;
+        const scaleX = video.videoWidth / window.innerWidth;
+        const scaleY = video.videoHeight / window.innerHeight;
 
         const cropCanvas = document.createElement('canvas');
         cropCanvas.width = rect.width * scaleX;
@@ -1407,7 +1334,7 @@
         const ctx = cropCanvas.getContext('2d');
 
         ctx.drawImage(
-          bitmap,
+          video,
           rect.left * scaleX,
           rect.top * scaleY,
           rect.width * scaleX,
@@ -1418,11 +1345,14 @@
           cropCanvas.height
         );
 
+        // 스트림 트랙 종료
+        stream.getTracks().forEach(t => t.stop());
+
         const filename = `ScreenCapture_${currentStation}_${Date.now()}.png`;
-        downloadDataUrl(cropCanvas.toDataURL('image/png'), filename);
+        const dataUrl = cropCanvas.toDataURL('image/png');
+        showDownloadModal(dataUrl, filename);
       } catch (err) {
-        // 사용자가 화면 공유를 취소했거나 오류 시 기본 저장으로 전환
-        console.log("화면 캡처 취소/미지원, 일반 저장 실행");
+        console.log("화면 캡처 취소/종료");
       } finally {
         revealedParties = prevRevealed;
         renderScreen();
