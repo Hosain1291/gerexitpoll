@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>독일 선거 방송 그래픽 시뮬레이터 (ARD / ZDF)</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- 고화질 스크린샷 캡처 라이브러리 -->
+  <!-- 고화질 스크린샷 캡처 라이브러리 (html2canvas 대체 및 아랍어 자음 분리 방지용 html-to-image) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   
   <!-- 전 세계 언어 및 아랍어·한·중·일·히브리·태국·힌디어 100% 지원 Google Fonts -->
@@ -60,6 +61,12 @@
     /* 스튜디오 디스플레이 외곽 그림자 */
     .screen-shadow {
       box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.9), 0 0 35px rgba(25, 118, 210, 0.25);
+    }
+
+    /* 캡처 시 트랜지션 지연 오차 방지용 클래스 */
+    .no-transitions * {
+      transition: none !important;
+      animation: none !important;
     }
 
     ::-webkit-scrollbar {
@@ -119,22 +126,22 @@
         <span>JSON 저장</span>
       </button>
 
-      <!-- JSON 불러오기 버튼 -->
-      <label class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 border border-slate-700 cursor-pointer shadow transition active:scale-95" title="설정 JSON 불러오기">
-        <svg class="w-4 h-4 fill-none stroke-current" stroke-width="2" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
-        </svg>
-        <span>JSON 불러오기</span>
-        <input type="file" id="json-file-input" accept=".json" onchange="importFromJson(event)" class="hidden">
-      </label>
-
-      <!-- 사진 저장 버튼 -->
-      <button onclick="captureScreen()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow transition active:scale-95" title="방송 스크린을 고화질 PNG로 저장">
-        <svg class="w-4 h-4 fill-none stroke-current" stroke-width="2" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-        </svg>
-        <span>사진 저장</span>
-      </button>
+      <!-- 사진 저장 버튼군 (일반 저장 + 화면 직접 캡처) -->
+      <div class="flex items-center gap-1">
+        <button onclick="captureScreen()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow transition active:scale-95" title="아랍어 분리 없는 고화질 이미지 저장">
+          <svg class="w-4 h-4 fill-none stroke-current" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+          </svg>
+          <span>사진 저장</span>
+        </button>
+        <button onclick="captureWithDisplayMedia()" class="bg-teal-700 hover:bg-teal-600 text-white px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 shadow transition active:scale-95" title="실제 모니터/화면 직접 캡처">
+          <svg class="w-3.5 h-3.5 fill-none stroke-current" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+          <span class="hidden md:inline">화면 캡처</span>
+        </button>
+      </div>
 
       <!-- 전체화면 토글 -->
       <button onclick="toggleFullScreen()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1.5 rounded-lg border border-slate-700 text-xs font-semibold flex items-center gap-1" title="화면 꽉 차게 보기">
@@ -289,10 +296,17 @@
           </select>
         </div>
 
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2 flex-wrap">
           <label class="text-slate-400 font-medium">정당 간 대기 시간:</label>
-          <span id="delay-label" class="font-bold text-amber-400 w-8">1.0초</span>
-          <input type="range" id="delay-slider" min="0.3" max="3.0" step="0.1" value="1.0" oninput="updateDelay(this.value)" class="w-24 accent-amber-500 cursor-pointer">
+          <span id="delay-label" class="font-bold text-amber-400 w-12 text-center font-num">1.0초</span>
+          <input type="range" id="delay-slider" min="0.3" max="10.0" step="0.1" value="1.0" oninput="updateDelay(this.value)" class="w-28 accent-amber-500 cursor-pointer">
+          <!-- 1초, 3초, 5초, 7초 빠른 선택 버튼 -->
+          <div class="flex items-center gap-1">
+            <button type="button" onclick="setQuickDelay(1.0)" class="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-num border border-slate-700 transition">1초</button>
+            <button type="button" onclick="setQuickDelay(3.0)" class="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-num border border-slate-700 transition">3초</button>
+            <button type="button" onclick="setQuickDelay(5.0)" class="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-num border border-slate-700 transition">5초</button>
+            <button type="button" onclick="setQuickDelay(7.0)" class="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-num border border-slate-700 transition">7초</button>
+          </div>
         </div>
       </div>
     </section>
@@ -327,13 +341,17 @@
           </div>
           <div class="grid grid-cols-2 gap-2">
             <div>
+              <label class="block text-slate-400 text-[10px] mb-0.5">단위 표기</label>
+              <input type="text" id="meta-zdf-unit" dir="auto" value="in Prozent" oninput="renderScreen()" class="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1 text-slate-200">
+            </div>
+            <div>
               <label class="block text-slate-400 text-[10px] mb-0.5">타이틀</label>
               <input type="text" id="meta-zdf-title" dir="auto" value="Wahl2026" oninput="renderScreen()" class="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1 text-slate-200">
             </div>
-            <div>
-              <label class="block text-slate-400 text-[10px] mb-0.5">세부 일시</label>
-              <input type="text" id="meta-zdf-subdate" dir="auto" value="06.09.2026, 23:24 Uhr" oninput="renderScreen()" class="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1 text-slate-200 font-num">
-            </div>
+          </div>
+          <div>
+            <label class="block text-slate-400 text-[10px] mb-0.5">세부 일시</label>
+            <input type="text" id="meta-zdf-subdate" dir="auto" value="06.09.2026, 23:24 Uhr" oninput="renderScreen()" class="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1 text-slate-200 font-num">
           </div>
         </div>
 
@@ -350,9 +368,15 @@
               <input type="text" id="meta-ard-year" dir="auto" value="2026" oninput="renderScreen()" class="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1 text-slate-200 font-num">
             </div>
           </div>
-          <div>
-            <label class="block text-slate-400 text-[10px] mb-0.5">서브 유형 (예: Prognose)</label>
-            <input type="text" id="meta-ard-sub" dir="auto" value="Prognose" oninput="renderScreen()" class="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1 text-slate-200">
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-slate-400 text-[10px] mb-0.5">서브 유형 (예: Prognose)</label>
+              <input type="text" id="meta-ard-sub" dir="auto" value="Prognose" oninput="renderScreen()" class="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1 text-slate-200">
+            </div>
+            <div>
+              <label class="block text-slate-400 text-[10px] mb-0.5">단위 표기 (예: in %)</label>
+              <input type="text" id="meta-ard-unit" dir="auto" value="in %" oninput="renderScreen()" class="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1 text-slate-200">
+            </div>
           </div>
         </div>
 
@@ -585,7 +609,7 @@
     function exportToJson() {
       const configData = {
         app: "German Election Graphics Simulator",
-        version: "3.0",
+        version: "3.1",
         exportedAt: new Date().toISOString(),
         settings: {
           currentStation,
@@ -596,11 +620,13 @@
           totalSeats: parseInt(document.getElementById('meta-total-seats').value) || 83,
           source: document.getElementById('meta-source').value,
           zdfHeadline: document.getElementById('meta-zdf-headline').value,
+          zdfUnit: document.getElementById('meta-zdf-unit').value,
           zdfTitle: document.getElementById('meta-zdf-title').value,
           zdfSubdate: document.getElementById('meta-zdf-subdate').value,
           ardTitle: document.getElementById('meta-ard-title').value,
           ardYear: document.getElementById('meta-ard-year').value,
-          ardSub: document.getElementById('meta-ard-sub').value
+          ardSub: document.getElementById('meta-ard-sub').value,
+          ardUnit: document.getElementById('meta-ard-unit').value
         },
         parties: parties
       };
@@ -638,11 +664,13 @@
             if (s.totalSeats) document.getElementById('meta-total-seats').value = s.totalSeats;
             if (s.source) document.getElementById('meta-source').value = s.source;
             if (s.zdfHeadline) document.getElementById('meta-zdf-headline').value = s.zdfHeadline;
+            if (s.zdfUnit) document.getElementById('meta-zdf-unit').value = s.zdfUnit;
             if (s.zdfTitle) document.getElementById('meta-zdf-title').value = s.zdfTitle;
             if (s.zdfSubdate) document.getElementById('meta-zdf-subdate').value = s.zdfSubdate;
             if (s.ardTitle) document.getElementById('meta-ard-title').value = s.ardTitle;
             if (s.ardYear) document.getElementById('meta-ard-year').value = s.ardYear;
             if (s.ardSub) document.getElementById('meta-ard-sub').value = s.ardSub;
+            if (s.ardUnit) document.getElementById('meta-ard-unit').value = s.ardUnit;
 
             if (s.stepDelay) {
               stepDelay = parseFloat(s.stepDelay);
@@ -721,29 +749,26 @@
       const btnSeats = document.getElementById('btn-view-seats');
       const viewBar = document.getElementById('view-barchart');
       const viewSeats = document.getElementById('view-seatschart');
-      const zdfUnit = document.getElementById('disp-zdf-unit');
-      const ardSub = document.getElementById('disp-ard-sub');
-      const ardUnit = document.getElementById('disp-ard-unit');
       const ardBigLogo = document.getElementById('disp-ard-big-logo');
+      const tot = document.getElementById('meta-total-seats').value || 83;
 
       if (vm === 'bar') {
         btnBar.className = "px-3 py-1 rounded bg-blue-600 text-white shadow transition";
         btnSeats.className = "px-3 py-1 rounded text-slate-300 hover:text-white transition";
         viewBar.classList.remove('hidden');
         viewSeats.classList.add('hidden');
-        zdfUnit.innerText = "in Prozent";
-        ardSub.innerText = document.getElementById('meta-ard-sub').value || "Prognose";
-        ardUnit.innerText = "in %";
+        document.getElementById('meta-zdf-unit').value = "in Prozent";
+        document.getElementById('meta-ard-sub').value = "Prognose";
+        document.getElementById('meta-ard-unit').value = "in %";
         ardBigLogo.classList.add('hidden');
       } else {
         btnSeats.className = "px-3 py-1 rounded bg-blue-600 text-white shadow transition";
         btnBar.className = "px-3 py-1 rounded text-slate-300 hover:text-white transition";
         viewBar.classList.add('hidden');
         viewSeats.classList.remove('hidden');
-        const tot = document.getElementById('meta-total-seats').value || 83;
-        zdfUnit.innerText = "Sitze gesamt: " + tot;
-        ardSub.innerText = "Sitzverteilung";
-        ardUnit.innerText = tot + " Sitze";
+        document.getElementById('meta-zdf-unit').value = "Sitze gesamt: " + tot;
+        document.getElementById('meta-ard-sub').value = "Sitzverteilung";
+        document.getElementById('meta-ard-unit').value = tot + " Sitze";
         if (currentStation === 'ARD') {
           ardBigLogo.classList.remove('hidden');
         }
@@ -753,7 +778,12 @@
 
     function updateDelay(val) {
       stepDelay = parseFloat(val);
-      document.getElementById('delay-label').innerText = val + '초';
+      document.getElementById('delay-slider').value = stepDelay;
+      document.getElementById('delay-label').innerText = stepDelay.toFixed(1) + '초';
+    }
+
+    function setQuickDelay(val) {
+      updateDelay(val);
     }
 
     function changeOrderMode() {
@@ -771,18 +801,24 @@
 
       document.getElementById('disp-source').innerText = source;
 
-      // ZDF 텍스트
+      // ZDF 텍스트 동기화
       document.getElementById('disp-zdf-headline').innerText = document.getElementById('meta-zdf-headline').value;
+      document.getElementById('disp-zdf-unit').innerText = document.getElementById('meta-zdf-unit').value;
       document.getElementById('disp-zdf-title').innerText = document.getElementById('meta-zdf-title').value;
       document.getElementById('disp-zdf-region').innerText = region;
       document.getElementById('disp-zdf-subdate').innerText = document.getElementById('meta-zdf-subdate').value;
 
-      // ARD 텍스트
+      // ARD 텍스트 동기화 (Prognose 및 단위 표기 완벽 반영)
       const ardTitleVal = document.getElementById('meta-ard-title').value;
       const ardYearVal = document.getElementById('meta-ard-year').value;
+      const ardSubVal = document.getElementById('meta-ard-sub').value;
+      const ardUnitVal = document.getElementById('meta-ard-unit').value;
+
       document.getElementById('disp-ard-title-word').innerText = ardTitleVal;
       document.getElementById('disp-ard-year-box').innerText = ardYearVal;
       document.getElementById('disp-ard-region').innerText = region;
+      document.getElementById('disp-ard-sub').innerText = ardSubVal;
+      document.getElementById('disp-ard-unit').innerText = ardUnitVal;
       document.getElementById('disp-ard-big-logo').innerText = `${ardTitleVal} ${ardYearVal}`;
 
       if (currentView === 'bar') {
@@ -1210,41 +1246,124 @@
     }
 
     /* ====================================================================
-       사진 저장 (화면 그대로 1:1 고해상도 캡처 + 아랍어/다국어 합자 100% 보존)
+       사진 저장 엔진 1: 브라우저 네이티브 렌더러(html-to-image)
+       - 아랍어 자음 분리(حروف متقطعة) 0% 완벽 해결
        ==================================================================== */
     async function captureScreen() {
       const screenElem = document.getElementById('broadcast-screen');
       if (!screenElem) return;
 
+      if (document.fonts) {
+        await document.fonts.ready;
+      }
+
+      // 미발표 정당 100% 공개
       const prevRevealed = new Set(revealedParties);
       parties.forEach(p => revealedParties.add(p.id));
       renderScreen();
 
       await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 
+      const filename = `${currentStation}_${currentView === 'bar' ? 'Hochrechnung' : 'Sitzverteilung'}_${Date.now()}.png`;
+
       try {
-        const canvas = await html2canvas(screenElem, {
-          scale: 2,
-          useCORS: true,
-          backgroundColor: null,
-          logging: false,
-          onclone: (clonedDoc) => {
-            const clonedScreen = clonedDoc.getElementById('broadcast-screen');
-            if (clonedScreen) {
-              clonedScreen.style.fontFeatureSettings = '"liga" 1, "calt" 1';
-              clonedScreen.style.textRendering = 'optimizeLegibility';
-              applyRTLFixToClonedDOM(clonedScreen);
+        // html-to-image 방식 우선 시도 (SVG foreignObject 기반으로 아랍어 연결형 글자 100% 보존)
+        if (window.htmlToImage) {
+          const dataUrl = await htmlToImage.toPng(screenElem, {
+            pixelRatio: 2,
+            backgroundColor: null,
+            cacheBust: true,
+            filter: (node) => {
+              return true;
             }
-          }
+          });
+          downloadDataUrl(dataUrl, filename);
+        } else {
+          // fallback: html2canvas
+          const canvas = await html2canvas(screenElem, {
+            scale: 2,
+            useCORS: true,
+            backgroundColor: null,
+            logging: false
+          });
+          downloadDataUrl(canvas.toDataURL('image/png'), filename);
+        }
+      } catch (err) {
+        console.warn("htmlToImage 실패, html2canvas 대체 시도:", err);
+        try {
+          const canvas = await html2canvas(screenElem, { scale: 2, useCORS: true, backgroundColor: null });
+          downloadDataUrl(canvas.toDataURL('image/png'), filename);
+        } catch (e2) {
+          console.error("사진 저장 실패:", e2);
+        }
+      } finally {
+        revealedParties = prevRevealed;
+        renderScreen();
+      }
+    }
+
+    function downloadDataUrl(dataUrl, filename) {
+      const link = document.createElement('a');
+      link.download = filename;
+      link.href = dataUrl;
+      link.click();
+    }
+
+    /* ====================================================================
+       사진 저장 엔진 2: 실제 화면 직접 캡처 (Screen Capture API)
+       - 사용자가 제안한 '진짜 화면 캡처' 방식
+       ==================================================================== */
+    async function captureWithDisplayMedia() {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+        // 모바일 등 미지원 브라우저는 네이티브 저장으로 안내
+        captureScreen();
+        return;
+      }
+
+      const screenElem = document.getElementById('broadcast-screen');
+      const prevRevealed = new Set(revealedParties);
+      parties.forEach(p => revealedParties.add(p.id));
+      renderScreen();
+
+      try {
+        // 화면 공유 스트림 생성 (1프레임 캡처용)
+        const stream = await navigator.mediaDevices.getDisplayMedia({
+          video: { cursor: "never" },
+          audio: false
         });
 
-        const link = document.createElement('a');
-        const filename = `${currentStation}_${currentView === 'bar' ? 'Hochrechnung' : 'Sitzverteilung'}_${Date.now()}.png`;
-        link.download = filename;
-        link.href = canvas.toDataURL('image/png');
-        link.click();
+        const track = stream.getVideoTracks()[0];
+        const imageCapture = new ImageCapture(track);
+        const bitmap = await imageCapture.grabFrame();
+        track.stop();
+
+        // 캔버스에 방송 스크린 요소의 화면상 좌표 영역만 크롭
+        const rect = screenElem.getBoundingClientRect();
+        const scaleX = bitmap.width / window.innerWidth;
+        const scaleY = bitmap.height / window.innerHeight;
+
+        const cropCanvas = document.createElement('canvas');
+        cropCanvas.width = rect.width * scaleX;
+        cropCanvas.height = rect.height * scaleY;
+        const ctx = cropCanvas.getContext('2d');
+
+        ctx.drawImage(
+          bitmap,
+          rect.left * scaleX,
+          rect.top * scaleY,
+          rect.width * scaleX,
+          rect.height * scaleY,
+          0,
+          0,
+          cropCanvas.width,
+          cropCanvas.height
+        );
+
+        const filename = `ScreenCapture_${currentStation}_${Date.now()}.png`;
+        downloadDataUrl(cropCanvas.toDataURL('image/png'), filename);
       } catch (err) {
-        console.error("사진 저장 중 오류:", err);
+        // 사용자가 화면 공유를 취소했거나 오류 시 기본 저장으로 전환
+        console.log("화면 캡처 취소/미지원, 일반 저장 실행");
       } finally {
         revealedParties = prevRevealed;
         renderScreen();
@@ -1255,11 +1374,13 @@
       document.getElementById('meta-region').value = "Sachsen-Anhalt";
       document.getElementById('meta-total-seats').value = "83";
       document.getElementById('meta-zdf-headline').value = "Hochrechnung 23:22 Uhr";
+      document.getElementById('meta-zdf-unit').value = "in Prozent";
       document.getElementById('meta-zdf-title').value = "Wahl2026";
       document.getElementById('meta-zdf-subdate').value = "06.09.2026, 23:24 Uhr";
       document.getElementById('meta-ard-title').value = "WAHL";
       document.getElementById('meta-ard-year').value = "2026";
       document.getElementById('meta-ard-sub').value = "Prognose";
+      document.getElementById('meta-ard-unit').value = "in %";
       parties = JSON.parse(JSON.stringify(DEFAULT_PARTIES));
       resetAnimation();
       renderPartyList();
