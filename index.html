@@ -1359,6 +1359,156 @@
       }
     }
 
+    /* ====================================================================
+       동영상 변환 및 녹화 엔진 (MediaRecorder + Canvas CaptureStream)
+       ==================================================================== */
+    let videoMediaRecorder = null;
+    let videoRecordedChunks = [];
+    let isExportingVideo = false;
+
+    function showVideoModal(videoUrl, filename) {
+      const modal = document.getElementById('video-modal');
+      const vid = document.getElementById('preview-captured-video');
+      const directBtn = document.getElementById('btn-modal-video-download');
+
+      vid.src = videoUrl;
+      directBtn.href = videoUrl;
+      directBtn.download = filename;
+
+      modal.classList.remove('hidden');
+
+      // PC 브라우저 자동 다운로드 시도
+      try {
+        const link = document.createElement('a');
+        link.download = filename;
+        link.href = videoUrl;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } catch (e) {}
+    }
+
+    function closeVideoModal() {
+      const modal = document.getElementById('video-modal');
+      const vid = document.getElementById('preview-captured-video');
+      vid.pause();
+      vid.src = "";
+      modal.classList.add('hidden');
+    }
+
+    async function exportToVideo() {
+      if (isExportingVideo) return;
+
+      const screenElem = document.getElementById('broadcast-screen');
+      if (!screenElem) return;
+
+      // MediaRecorder 지원 여부 확인
+      if (!window.MediaRecorder) {
+        const toast = document.createElement('div');
+        toast.className = "fixed bottom-5 right-5 z-50 bg-rose-600 text-white px-4 py-2 rounded-lg text-xs font-bold shadow-lg";
+        toast.innerText = "현재 브라우저는 영상 녹화(MediaRecorder)를 지원하지 않습니다.";
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
+        return;
+      }
+
+      isExportingVideo = true;
+      const videoBtn = document.getElementById('btn-export-video');
+      const videoBtnText = document.getElementById('video-btn-text');
+      const originalText = videoBtnText.innerText;
+      videoBtn.disabled = true;
+      videoBtnText.innerText = "녹화 중...";
+
+      // 녹화용 오프스크린 캔버스 생성 (1280x720 16:9 규격)
+      const recCanvas = document.createElement('canvas');
+      recCanvas.width = 1280;
+      recCanvas.height = 720;
+      const recCtx = recCanvas.getContext('2d');
+
+      const stream = recCanvas.captureStream(30); // 30 FPS 스트림
+
+      // 최적의 지원 MIME 타입 선택
+      let mimeType = 'video/webm;codecs=vp9';
+      if (!MediaRecorder.isTypeSupported(mimeType)) {
+        mimeType = 'video/webm';
+        if (!MediaRecorder.isTypeSupported(mimeType)) {
+          mimeType = 'video/mp4';
+          if (!MediaRecorder.isTypeSupported(mimeType)) {
+            mimeType = '';
+          }
+        }
+      }
+
+      videoRecordedChunks = [];
+      try {
+        videoMediaRecorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+      } catch (e) {
+        videoMediaRecorder = new MediaRecorder(stream);
+      }
+
+      videoMediaRecorder.ondataavailable = function(e) {
+        if (e.data && e.data.size > 0) {
+          videoRecordedChunks.push(e.data);
+        }
+      };
+
+      videoMediaRecorder.start(100);
+
+      // 애니메이션 초기화 후 녹화 시작
+      resetAnimation();
+
+      // 프레임 캡처 루프 가동
+      let keepRecording = true;
+      async function captureFrameLoop() {
+        if (!keepRecording) return;
+        try {
+          const frameCanvas = await html2canvas(screenElem, {
+            scale: 1.2,
+            useCORS: true,
+            allowTaint: true,
+            backgroundColor: null,
+            logging: false
+          });
+          recCtx.clearRect(0, 0, recCanvas.width, recCanvas.height);
+          recCtx.drawImage(frameCanvas, 0, 0, recCanvas.width, recCanvas.height);
+        } catch (err) {}
+        if (keepRecording) {
+          requestAnimationFrame(captureFrameLoop);
+        }
+      }
+
+      captureFrameLoop();
+
+      // 발표 시작
+      startBroadcastAnimation();
+
+      // 발표 시퀀스 총 시간 계산: (정당 수 * stepDelay) + 시작 대기 + 종료 여유
+      const totalParties = parties.length;
+      const totalDurationMs = (orderMode === 'all' ? 1200 : (totalParties * stepDelay * 1000) + 1800);
+
+      setTimeout(() => {
+        keepRecording = false;
+
+        setTimeout(() => {
+          if (videoMediaRecorder && videoMediaRecorder.state !== 'inactive') {
+            videoMediaRecorder.onstop = function() {
+              const fileExt = mimeType.includes('mp4') ? 'mp4' : 'webm';
+              const blob = new Blob(videoRecordedChunks, { type: mimeType || 'video/webm' });
+              const videoUrl = URL.createObjectURL(blob);
+              const filename = `${currentStation}_Election_Broadcast_${Date.now()}.${fileExt}`;
+              showVideoModal(videoUrl, filename);
+
+              isExportingVideo = false;
+              videoBtn.disabled = false;
+              videoBtnText.innerText = originalText;
+            };
+            videoMediaRecorder.stop();
+          }
+        }, 500);
+
+      }, totalDurationMs);
+    }
+
     function resetDefaults() {
       document.getElementById('meta-region').value = "Sachsen-Anhalt";
       document.getElementById('meta-total-seats').value = "83";
