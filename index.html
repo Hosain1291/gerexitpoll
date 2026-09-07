@@ -135,30 +135,78 @@
         </div>
       </div>
 
-      <!-- 메타 정보 설정 -->
-      <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-2 text-xs">
+      <!-- 메타 텍스트 세부 설정 (ARD 메인 & ZDF 시간 텍스트 직접 수정) -->
+      <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-2.5 text-xs">
         <div class="font-bold text-slate-300 flex items-center justify-between">
           <span>방송 텍스트 설정</span>
           <button onclick="resetDefaults()" class="text-[11px] text-sky-400 hover:underline">기본값 복원</button>
         </div>
+
+        <!-- 1) 공통 및 지역 -->
         <div class="grid grid-cols-2 gap-2">
           <div>
             <label class="block text-slate-400 text-[10px] mb-1">선거 타이틀</label>
-            <input type="text" id="meta-title" value="Wahl 2026" oninput="renderScreen()" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs">
+            <input type="text" id="meta-title" value="Wahl 2026" oninput="renderScreen()" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs focus:border-blue-500 focus:outline-none">
           </div>
           <div>
-            <label class="block text-slate-400 text-[10px] mb-1">지역 / 연방주</label>
-            <input type="text" id="meta-region" value="Sachsen-Anhalt" oninput="renderScreen()" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs">
+            <label class="block text-slate-400 text-[10px] mb-1">지역 / 연방주 (Region)</label>
+            <input type="text" id="meta-region" value="Sachsen-Anhalt" oninput="renderScreen()" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs focus:border-blue-500 focus:outline-none">
           </div>
         </div>
-        <div class="grid grid-cols-2 gap-2">
-          <div>
-            <label class="block text-slate-400 text-[10px] mb-1">발표 시각/유형</label>
-            <input type="text" id="meta-time" value="Hochrechnung 23:22 Uhr" oninput="renderScreen()" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs">
+
+        <!-- 2) ZDF 전용 텍스트 설정 -->
+        <div class="p-2 rounded bg-slate-900/70 border border-slate-800 space-y-2">
+          <div class="flex items-center gap-1.5 font-bold text-[11px] text-amber-400">
+            <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+            <span>ZDF 텍스트 설정</span>
           </div>
           <div>
+            <label class="block text-slate-400 text-[10px] mb-0.5">ZDF 메인 헤드라인 (시간/유형)</label>
+            <input type="text" id="meta-zdf-time" value="Hochrechnung 23:22 Uhr" oninput="renderScreen()" class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs focus:border-amber-500 focus:outline-none" placeholder="예: Hochrechnung 23:22 Uhr 또는 Sitzverteilung">
+          </div>
+          <div>
+            <label class="block text-slate-400 text-[10px] mb-0.5">ZDF 우측 상세 일시 (Sub-Date)</label>
+            <input type="text" id="meta-zdf-datetime" value="06.09.2026, 23:24 Uhr" oninput="renderScreen()" class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs focus:border-amber-500 focus:outline-none" placeholder="예: 06.09.2026, 23:24 Uhr">
+          </div>
+        </div>
+
+        <!-- 3) ARD 전용 메인 텍스트 설정 -->
+        <div class="p-2 rounded bg-slate-900/70 border border-slate-800 space-y-2">
+          <div class="flex items-center gap-1.5 font-bold text-[11px] text-sky-400">
+            <span class="w-1.5 h-1.5 rounded-full bg-sky-500"></span>
+            <span>ARD 텍스트 설정</span>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-slate-400 text-[10px] mb-0.5">ARD 메인 로고 텍스트</label>
+              <input type="text" id="meta-ard-main" value="WAHL" oninput="renderScreen()" class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs focus:border-sky-500 focus:outline-none" placeholder="예: WAHL">
+            </div>
+            <div>
+              <label class="block text-slate-400 text-[10px] mb-0.5">ARD 메인 연도/구분</label>
+              <input type="text" id="meta-ard-year" value="2026" oninput="renderScreen()" class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs focus:border-sky-500 focus:outline-none" placeholder="예: 2026">
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-slate-400 text-[10px] mb-0.5">ARD 서브 타이틀</label>
+              <input type="text" id="meta-ard-sub" value="Prognose" oninput="renderScreen()" class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs focus:border-sky-500 focus:outline-none" placeholder="예: Prognose 또는 Sitzverteilung">
+            </div>
+            <div>
+              <label class="block text-slate-400 text-[10px] mb-0.5">ARD 단위 / 의석 표기</label>
+              <input type="text" id="meta-ard-unit" value="in %" oninput="renderScreen()" class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs focus:border-sky-500 focus:outline-none" placeholder="예: in % 또는 101 Sitze">
+            </div>
+          </div>
+        </div>
+
+        <!-- 의석수 및 출처 -->
+        <div class="grid grid-cols-2 gap-2">
+          <div>
             <label class="block text-slate-400 text-[10px] mb-1">총 의석수 (Sitze)</label>
-            <input type="number" id="meta-total-seats" value="83" oninput="renderScreen()" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs">
+            <input type="number" id="meta-total-seats" value="83" oninput="renderScreen()" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs focus:outline-none">
+          </div>
+          <div>
+            <label class="block text-slate-400 text-[10px] mb-1">출처 (Quelle)</label>
+            <input type="text" id="meta-source" value="" oninput="renderScreen()" placeholder="비워둘 시 방송사 자동" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs focus:outline-none">
           </div>
         </div>
       </div>
@@ -190,7 +238,7 @@
             <!-- 상단 바 -->
             <div class="flex items-center justify-between bg-gradient-to-r from-blue-900/90 via-blue-800/80 to-slate-900/90 rounded-sm px-3.5 py-1.5 border-b border-white/20 shadow-sm">
               <div class="flex items-center gap-2">
-                <span class="font-black text-2xl md:text-3xl text-white tracking-tighter uppercase">WAHL</span>
+                <span id="disp-ard-main" class="font-black text-2xl md:text-3xl text-white tracking-tighter uppercase">WAHL</span>
                 <span id="disp-ard-year" class="font-bold text-xl md:text-2xl text-white/95 border-l-2 border-white/40 pl-2">2026</span>
               </div>
               <div class="flex items-center gap-3">
@@ -272,8 +320,14 @@
 
         <!-- ======================= 하단 푸터 / 크레딧 ======================= -->
         <div class="relative z-10 flex items-center justify-between pt-2 text-[10px] md:text-xs text-white/70">
-          <div id="disp-source" class="font-semibold text-white/80">
-            infratest dimap
+          <div class="flex items-center gap-3">
+            <!-- ARD 의석수(4번 사진) 특유의 하단 대형 WAHL 로고 (조건부 렌더링) -->
+            <div id="disp-ard-bottom-logo" class="hidden font-black text-xl md:text-2xl text-white tracking-tighter">
+              <span id="disp-ard-bottom-main">WAHL</span> <span id="disp-ard-bottom-year">2026</span>
+            </div>
+            <div id="disp-source" class="font-semibold text-white/80">
+              infratest dimap
+            </div>
           </div>
           <div id="live-clock" class="font-mono text-white/50 text-[11px]">
             23:22:00
@@ -351,7 +405,6 @@
   </div>
 
   <script>
-    // 첨부해주신 사진과 일치하는 정확한 독일 주 선거 정당 데이터
     const DEFAULT_PARTIES = [
       { id: '1', name: 'CDU', percent: 18.5, seats: 15, diff: -18.6, color: '#111317' },
       { id: '2', name: 'AfD', percent: 44.5, seats: 39, diff: 23.7, color: '#004ca8' },
@@ -364,14 +417,14 @@
     ];
 
     let parties = JSON.parse(JSON.stringify(DEFAULT_PARTIES));
-    let currentStation = 'ARD'; // 초기 방송국: ARD
+    let currentStation = 'ARD'; // 'ARD' or 'ZDF'
     let currentView = 'bar';     // 'bar' or 'seats'
     let orderMode = 'custom';    // 'custom', 'votes', 'all'
     let stepDelay = 1.2;
     let isBroadcasting = false;
     let animationTimers = [];
 
-    // 공개된 정당 ID Set (초기에는 모두 표시)
+    // 공개된 정당 ID Set
     let revealedParties = new Set(parties.map(p => p.id));
 
     /* ====================================================================
@@ -384,7 +437,7 @@
       const screen = document.getElementById('broadcast-screen');
       const headerArd = document.getElementById('header-ard');
       const headerZdf = document.getElementById('header-zdf');
-      const dispSource = document.getElementById('disp-source');
+      const bottomLogo = document.getElementById('disp-ard-bottom-logo');
 
       if (station === 'ARD') {
         btnArd.className = "px-3 py-1.5 rounded transition-all bg-sky-600 text-white shadow";
@@ -393,7 +446,11 @@
         screen.classList.add('bg-ard');
         headerArd.classList.remove('hidden');
         headerZdf.classList.add('hidden');
-        dispSource.innerText = "infratest dimap";
+        if (currentView === 'seats') {
+          bottomLogo.classList.remove('hidden');
+        } else {
+          bottomLogo.classList.add('hidden');
+        }
       } else {
         btnZdf.className = "px-3 py-1.5 rounded transition-all bg-amber-500 text-slate-950 font-black shadow";
         btnArd.className = "px-3 py-1.5 rounded transition-all text-slate-300 hover:text-white";
@@ -401,7 +458,7 @@
         screen.classList.add('bg-zdf');
         headerZdf.classList.remove('hidden');
         headerArd.classList.add('hidden');
-        dispSource.innerText = "Quelle: Forschungsgruppe Wahlen";
+        bottomLogo.classList.add('hidden');
       }
       renderScreen();
     }
@@ -412,27 +469,37 @@
       const btnSeats = document.getElementById('btn-view-seats');
       const viewBar = document.getElementById('view-barchart');
       const viewSeats = document.getElementById('view-seatschart');
-      const ardSub = document.getElementById('disp-ard-subtitle');
-      const ardUnit = document.getElementById('disp-ard-unit');
-      const zdfUnit = document.getElementById('disp-zdf-unit');
+      const ardSub = document.getElementById('meta-ard-sub');
+      const ardUnit = document.getElementById('meta-ard-unit');
+      const zdfTime = document.getElementById('meta-zdf-time');
       const totalSeatsVal = document.getElementById('meta-total-seats').value || 83;
+      const bottomLogo = document.getElementById('disp-ard-bottom-logo');
 
       if (mode === 'bar') {
         btnBar.className = "px-3 py-1.5 rounded transition-all bg-blue-600 text-white shadow";
         btnSeats.className = "px-3 py-1.5 rounded transition-all text-slate-300 hover:text-white";
         viewBar.classList.remove('hidden');
         viewSeats.classList.add('hidden');
-        ardSub.innerText = "Prognose";
-        ardUnit.innerText = "in %";
-        zdfUnit.innerText = "in Prozent";
+        bottomLogo.classList.add('hidden');
+
+        // 기본 텍스트 프리셋 권장값 갱신
+        if (ardSub.value === "Sitzverteilung") ardSub.value = "Prognose";
+        if (ardUnit.value.includes("Sitze")) ardUnit.value = "in %";
+        if (zdfTime.value === "Sitzverteilung") zdfTime.value = "Hochrechnung 23:22 Uhr";
       } else {
         btnSeats.className = "px-3 py-1.5 rounded transition-all bg-blue-600 text-white shadow";
         btnBar.className = "px-3 py-1.5 rounded transition-all text-slate-300 hover:text-white";
         viewBar.classList.add('hidden');
         viewSeats.classList.remove('hidden');
-        ardSub.innerText = "Sitzverteilung";
-        ardUnit.innerText = totalSeatsVal + " Sitze";
-        zdfUnit.innerText = "Sitze gesamt: " + totalSeatsVal;
+
+        if (currentStation === 'ARD') {
+          bottomLogo.classList.remove('hidden');
+        }
+
+        // 기본 텍스트 프리셋 권장값 갱신
+        if (ardSub.value === "Prognose") ardSub.value = "Sitzverteilung";
+        if (ardUnit.value === "in %") ardUnit.value = totalSeatsVal + " Sitze";
+        if (zdfTime.value.includes("Hochrechnung")) zdfTime.value = "Sitzverteilung";
       }
       renderScreen();
     }
@@ -448,7 +515,7 @@
     }
 
     /* ====================================================================
-       정당 리스트 UI 및 커스텀
+       정당 관리 UI
        ==================================================================== */
     function renderPartyList() {
       const container = document.getElementById('party-list-container');
@@ -489,9 +556,7 @@
     }
 
     function deleteParty(id) {
-      if (parties.length <= 2) {
-        return;
-      }
+      if (parties.length <= 2) return;
       parties = parties.filter(p => p.id !== id);
       revealedParties.delete(id);
       renderPartyList();
@@ -578,23 +643,54 @@
     }
 
     /* ====================================================================
-       화면 렌더링 (ARD 및 ZDF 정밀 디자인)
+       화면 렌더링: ARD & ZDF 전용 텍스트 필드 바인딩
        ==================================================================== */
     function renderScreen() {
       const titleVal = document.getElementById('meta-title').value;
       const regionVal = document.getElementById('meta-region').value;
-      const timeVal = document.getElementById('meta-time').value;
       const totalSeatsVal = parseInt(document.getElementById('meta-total-seats').value) || 83;
+      const customSource = document.getElementById('meta-source').value.trim();
 
-      // ZDF 메타 텍스트
-      document.getElementById('disp-zdf-time').innerText = timeVal;
+      // ZDF 커스텀 텍스트
+      const zdfTimeVal = document.getElementById('meta-zdf-time').value;
+      const zdfDateVal = document.getElementById('meta-zdf-datetime').value;
+
+      document.getElementById('disp-zdf-time').innerText = zdfTimeVal;
+      document.getElementById('disp-zdf-datetime').innerText = zdfDateVal;
       document.getElementById('disp-zdf-title').innerText = titleVal.replace(/\s+/g, '');
       document.getElementById('disp-zdf-region').innerText = regionVal;
 
-      // ARD 메타 텍스트
-      document.getElementById('disp-ard-year').innerText = titleVal.replace(/[^0-9]/g, '') || "2026";
-      document.getElementById('disp-ard-region').innerText = regionVal;
+      if (currentView === 'bar') {
+        document.getElementById('disp-zdf-unit').innerText = "in Prozent";
+      } else {
+        document.getElementById('disp-zdf-unit').innerText = "Sitze gesamt: " + totalSeatsVal;
+      }
 
+      // ARD 커스텀 텍스트
+      const ardMainVal = document.getElementById('meta-ard-main').value;
+      const ardYearVal = document.getElementById('meta-ard-year').value;
+      const ardSubVal = document.getElementById('meta-ard-sub').value;
+      const ardUnitVal = document.getElementById('meta-ard-unit').value;
+
+      document.getElementById('disp-ard-main').innerText = ardMainVal;
+      document.getElementById('disp-ard-year').innerText = ardYearVal;
+      document.getElementById('disp-ard-region').innerText = regionVal;
+      document.getElementById('disp-ard-subtitle').innerText = ardSubVal;
+      document.getElementById('disp-ard-unit').innerText = ardUnitVal;
+
+      // ARD 하단 로고 텍스트 동기화
+      document.getElementById('disp-ard-bottom-main').innerText = ardMainVal;
+      document.getElementById('disp-ard-bottom-year').innerText = ardYearVal;
+
+      // 출처 표기 (커스텀 입력이 있으면 최우선, 없으면 방송사 기본값)
+      const dispSource = document.getElementById('disp-source');
+      if (customSource) {
+        dispSource.innerText = customSource;
+      } else {
+        dispSource.innerText = currentStation === 'ARD' ? "infratest dimap" : "Quelle: Forschungsgruppe Wahlen";
+      }
+
+      // 모드별 그래픽 렌더링
       if (currentView === 'bar') {
         renderBarChart();
       } else {
@@ -608,12 +704,10 @@
       container.innerHTML = '';
       if (parties.length === 0) return;
 
-      // 최대 득표율 기준으로 상대 높이(최소 50% 스케일)
       const maxVal = Math.max(...parties.map(p => p.percent), 48);
 
       parties.forEach(party => {
         const isRevealed = revealedParties.has(party.id);
-        // 바가 차지할 수직 비율 (상단 88% 기준)
         const heightPercent = Math.max((party.percent / maxVal) * 88, 3);
 
         const col = document.createElement('div');
@@ -631,17 +725,13 @@
 
             <!-- 하단 3단 정보 테이블 (ARD) -->
             <div class="w-full bg-white text-slate-900 rounded-sm shadow-md overflow-hidden mt-1.5 flex flex-col text-center">
-              <!-- 상단 정당 컬러 띠 -->
               <div class="h-2 w-full" style="background-color: ${party.color};"></div>
-              <!-- 1행: 정당명 -->
               <div class="py-1 font-bold text-xs md:text-sm lg:text-base text-slate-900 truncate">
                 ${party.name}
               </div>
-              <!-- 2행: 득표율 -->
               <div class="py-0.5 font-num font-bold text-sm md:text-xl lg:text-2xl text-slate-950 border-t border-slate-200">
                 ${isRevealed ? party.percent.toFixed(1).replace('.', ',') : '—'}
               </div>
-              <!-- 3행: 전회 대비 증감 (%p) -->
               <div class="py-0.5 text-[10px] md:text-xs font-num font-semibold text-slate-700 bg-slate-100 border-t border-slate-200">
                 ${isRevealed ? (party.diff >= 0 ? '+' : '') + party.diff.toFixed(1).replace('.', ',') : '—'}
               </div>
@@ -654,20 +744,16 @@
             <div class="w-full flex-1 flex flex-col justify-end items-center px-0.5 relative">
               <div class="w-full rounded-t-sm shadow-md wipe-up-transition relative flex flex-col justify-between"
                    style="height: ${isRevealed ? heightPercent : 0}%; background-color: ${party.color};">
-                <!-- 상단 화이트 캡 -->
                 <div class="w-full h-1.5 bg-white shadow-sm"></div>
               </div>
             </div>
 
             <!-- 하단 2단 정보 테이블 (ZDF) -->
             <div class="w-full bg-white text-slate-900 rounded-sm shadow-md overflow-hidden mt-1 flex flex-col text-center">
-              <!-- 상단: 큰 득표율 숫자 -->
               <div class="py-1.5 px-0.5 font-num font-black text-base md:text-2xl lg:text-3xl text-slate-950 leading-none tracking-tight">
                 ${isRevealed ? party.percent.toFixed(1).replace('.', ',') : '—'}
               </div>
-              <!-- 중간 정당 구분 컬러 라인 -->
               <div class="h-1 w-full" style="background-color: ${party.color};"></div>
-              <!-- 하단: 정당명 -->
               <div class="py-1 bg-slate-50 font-bold text-xs md:text-sm lg:text-base text-slate-800 truncate">
                 ${party.name}
               </div>
@@ -775,7 +861,7 @@
     }
 
     /* ====================================================================
-       순차 발표 시뮬레이션 (사운드 없이 깔끔한 애니메이션)
+       순차 발표 시뮬레이션
        ==================================================================== */
     function clearAllTimers() {
       animationTimers.forEach(t => clearTimeout(t));
@@ -866,11 +952,8 @@
       toast.innerText = "풀화면 그래픽 렌더링 및 캡처 중...";
       toast.classList.remove('opacity-0');
 
-      // 1) 저장 시 아직 발표되지 않아 안 보이던 정당들도 모두 보이도록 전체 공개 상태로 임시 전환
       const prevRevealed = new Set(revealedParties);
       parties.forEach(p => revealedParties.add(p.id));
-      
-      // 애니메이션 대기 없이 즉각 화면 전체 표시
       renderScreen();
 
       setTimeout(() => {
@@ -885,7 +968,6 @@
           onclone: (clonedDoc) => {
             const clonedScreen = clonedDoc.getElementById('broadcast-screen');
             if (clonedScreen) {
-              // 화면 잘림 방지: 1920x1080 풀 방송 해상도로 확장하여 구석의 로고/출처까지 완벽 캡처
               clonedScreen.style.width = '1920px';
               clonedScreen.style.height = '1080px';
               clonedScreen.style.maxWidth = '1920px';
@@ -893,7 +975,6 @@
               clonedScreen.style.borderRadius = '0px';
               clonedScreen.style.boxShadow = 'none';
 
-              // 클론 내부 트랜지션 해제 (즉시 100% 바 표시 보장)
               clonedScreen.querySelectorAll('.wipe-up-transition').forEach(el => {
                 el.style.transition = 'none';
               });
@@ -909,14 +990,13 @@
           link.href = canvas.toDataURL('image/png');
           link.click();
 
-          toast.innerText = "안 보이는 부분 없이 풀화면으로 사진이 저장되었습니다.";
+          toast.innerText = "풀화면으로 사진이 저장되었습니다.";
           setTimeout(() => toast.classList.add('opacity-0'), 2500);
         }).catch(err => {
           console.error(err);
           toast.innerText = "저장에 실패했습니다.";
           setTimeout(() => toast.classList.add('opacity-0'), 2500);
         }).finally(() => {
-          // 2) 캡처 완료 후 원래 진행 중이던 발표 상태로 복원
           revealedParties = prevRevealed;
           renderScreen();
           btnCapture.disabled = false;
@@ -928,8 +1008,14 @@
     function resetDefaults() {
       document.getElementById('meta-title').value = "Wahl 2026";
       document.getElementById('meta-region').value = "Sachsen-Anhalt";
-      document.getElementById('meta-time').value = "Hochrechnung 23:22 Uhr";
+      document.getElementById('meta-zdf-time').value = "Hochrechnung 23:22 Uhr";
+      document.getElementById('meta-zdf-datetime').value = "06.09.2026, 23:24 Uhr";
+      document.getElementById('meta-ard-main').value = "WAHL";
+      document.getElementById('meta-ard-year').value = "2026";
+      document.getElementById('meta-ard-sub').value = "Prognose";
+      document.getElementById('meta-ard-unit').value = "in %";
       document.getElementById('meta-total-seats').value = "83";
+      document.getElementById('meta-source').value = "";
       parties = JSON.parse(JSON.stringify(DEFAULT_PARTIES));
       revealedParties = new Set(parties.map(p => p.id));
       renderPartyList();
